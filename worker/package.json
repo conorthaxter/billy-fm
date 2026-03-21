@@ -1,0 +1,20 @@
+{
+  "name": "billy-fm-worker",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:create": "wrangler d1 create billy-fm-db",
+    "db:migrate": "wrangler d1 execute billy-fm-db --file=./schema.sql",
+    "db:migrate:remote": "wrangler d1 execute billy-fm-db --remote --file=./schema.sql"
+  },
+  "dependencies": {
+    "itty-router": "^5.0.23"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240512.0",
+    "typescript": "^5.4.5",
+    "wrangler": "^3.57.0"
+  }
+}
