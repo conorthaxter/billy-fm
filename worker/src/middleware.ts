@@ -89,6 +89,41 @@ export function corsify(
 }
 
 // ---------------------------------------------------------------------------
+// Service auth middleware — for server-to-server calls from billy-book
+// ---------------------------------------------------------------------------
+
+const SERVICE_USER: User = {
+  id: 'service',
+  email: 'service@billy-fm',
+  display_name: 'Billy Book Service',
+  avatar_url: null,
+  is_performer: 0,
+};
+
+export async function withServiceAuth(
+  request: AuthRequest,
+  env: Env,
+): Promise<Response | undefined> {
+  const authHeader = request.headers.get('Authorization') ?? '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+  if (!token || token !== env.BILLY_FM_SERVICE_KEY) {
+    return error(401, { error: 'Unauthorized' });
+  }
+  request.user = SERVICE_USER;
+}
+
+export async function withAuthOrService(
+  request: AuthRequest,
+  env: Env,
+): Promise<Response | undefined> {
+  const authHeader = request.headers.get('Authorization') ?? '';
+  if (authHeader.startsWith('Bearer ')) {
+    return withServiceAuth(request, env);
+  }
+  return withAuth(request, env);
+}
+
+// ---------------------------------------------------------------------------
 // Auth middleware — attach user to request or return 401
 // ---------------------------------------------------------------------------
 

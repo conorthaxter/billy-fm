@@ -1,17 +1,1555 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>billy-fm</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap"
-      rel="stylesheet"
-    />
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>billy-fm — music library for live performers</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ─── RESET ─── */
+*, *::before, *::after {
+  margin: 0; padding: 0;
+  box-sizing: border-box;
+  border-radius: 0 !important;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+:root {
+  --font: 'Inter', system-ui, sans-serif;
+  --mono: 'IBM Plex Mono', monospace;
+  --bg: #fff;
+  --border: 1px solid #000;
+}
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: #000; line-height: 1.4; }
+a { color: inherit; text-decoration: underline; }
+a:hover { opacity: 0.7; }
+button { cursor: pointer; font-family: var(--font); }
+
+/* ─── SITE NAV ─── */
+.site-nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 42px;
+  border-bottom: 1px solid #000;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  z-index: 100;
+}
+.site-nav-brand {
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  color: #000;
+  letter-spacing: 0.5px;
+}
+.site-nav-signin {
+  font-size: 12px;
+  font-weight: 600;
+  color: #000;
+  text-decoration: none;
+  border: 1px solid #000;
+  padding: 5px 12px;
+  transition: background 0.1s, color 0.1s;
+}
+.site-nav-signin:hover { background: #000; color: #fff; }
+
+/* ─── HERO ─── */
+#hero {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 100px 20px 60px;
+  background: #fff;
+  position: relative;
+  overflow: hidden;
+}
+.hero-float {
+  position: absolute;
+  padding: 8px 11px 6px;
+  font-family: var(--font);
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 130px;
+  min-height: 80px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  border-radius: 0 !important;
+}
+.hero-float.visible { opacity: 1; }
+.hf-title  { font-size: 11px; font-weight: 700; color: #fff; line-height: 1.2; margin-bottom: 2px; }
+.hf-artist { font-size: 9px; color: rgba(255,255,255,0.7); }
+.hf-key    { font-size: 9px; font-weight: 700; color: #fff; margin-top: auto; }
+.hero-card {
+  max-width: 480px;
+  width: 100%;
+  text-align: center;
+}
+.hero-brand {
+  font-family: var(--mono);
+  font-size: 40px;
+  font-weight: 700;
+  letter-spacing: -1px;
+  margin-bottom: 20px;
+  color: #000;
+}
+.hero-tagline {
+  font-size: 17px;
+  font-weight: 400;
+  color: #333;
+  margin-bottom: 32px;
+  line-height: 1.65;
+}
+.btn-primary {
+  display: inline-block;
+  color: #fff;
+  border: none;
+  padding: 13px 32px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  text-align: center;
+  animation: btn-key-cycle 8s linear infinite;
+}
+.btn-primary:hover { opacity: 0.88; color: #fff; }
+@keyframes btn-key-cycle {
+  0%   { background: hsl(0,80%,45%); }
+  12%  { background: hsl(22,85%,48%); }
+  24%  { background: hsl(88,75%,36%); }
+  36%  { background: hsl(160,70%,36%); }
+  48%  { background: hsl(205,80%,44%); }
+  60%  { background: hsl(255,70%,50%); }
+  72%  { background: hsl(285,65%,46%); }
+  84%  { background: hsl(320,75%,44%); }
+  100% { background: hsl(0,80%,45%); }
+}
+
+/* ─── SECTION SHARED ─── */
+.section {
+  border-top: 1px solid #000;
+  padding: 70px 24px;
+}
+.section-inner {
+  max-width: 960px;
+  margin: 0 auto;
+}
+.section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-bottom: 28px;
+  font-variant: small-caps;
+}
+
+/* ─── HOW IT WORKS ─── */
+#how {
+  padding-top: 60px;
+  padding-bottom: 70px;
+}
+.how-header {
+  max-width: 960px;
+  margin: 0 auto 16px;
+  padding: 0 24px;
+}
+.how-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-variant: small-caps;
+  margin-bottom: 8px;
+}
+.step-label {
+  font-size: 11px;
+  color: #555;
+  min-height: 18px;
+  transition: opacity 0.3s;
+}
+
+/* Demo wrapper */
+.demo-wrapper {
+  position: relative;
+  display: flex;
+  gap: 0;
+  border: 1px solid #000;
+  background: #fff;
+  max-width: 1060px;
+  margin: 0 auto;
+  overflow: hidden;
+  min-height: 480px;
+}
+
+/* LEFT PANEL */
+.demo-left {
+  width: 150px;
+  min-width: 150px;
+  border-right: 1px solid #000;
+  display: flex;
+  flex-direction: column;
+  font-size: 10px;
+}
+.demo-left-song {
+  padding: 10px 10px 8px;
+  border-bottom: 1px solid #000;
+  min-height: 110px;
+}
+.dl-empty {
+  color: #aaa;
+  font-size: 9px;
+  margin-top: 6px;
+}
+.dl-title {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.3;
+  margin-bottom: 2px;
+  display: none;
+}
+.dl-artist {
+  font-size: 9px;
+  color: #555;
+  margin-bottom: 6px;
+  display: none;
+}
+.dl-key-badge {
+  display: none;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+  margin-bottom: 5px;
+  width: fit-content;
+}
+.dl-bpm {
+  font-size: 9px;
+  color: #444;
+  display: none;
+}
+.demo-left-filters {
+  padding: 10px;
+  flex: 1;
+}
+.filter-label-head {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #888;
+  margin-bottom: 8px;
+}
+.filter-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 7px;
+  font-size: 9px;
+  cursor: pointer;
+}
+.filter-row input[type="checkbox"] {
+  width: 11px;
+  height: 11px;
+  accent-color: #000;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.filter-row label { cursor: pointer; line-height: 1.3; }
+
+/* CENTER */
+.demo-center {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.demo-controls {
+  padding: 7px 10px;
+  border-bottom: 1px solid #000;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 9px;
+  background: #fafafa;
+  flex-shrink: 0;
+}
+.demo-controls-search {
+  border: 1px solid #ccc;
+  background: #fff;
+  padding: 3px 7px;
+  font-size: 9px;
+  font-family: var(--font);
+  width: 110px;
+}
+.match-count {
+  font-size: 9px;
+  font-weight: 700;
+  color: #000;
+  min-width: 60px;
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+.match-count.visible { opacity: 1; }
+.demo-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: #ccc;
+  flex: 1;
+  align-content: start;
+  padding: 0;
+  position: relative;
+}
+
+/* SONG CELLS */
+.sc {
+  border: 1px solid transparent;
+  padding: 8px 9px 6px;
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 80px;
+  font-family: var(--font);
+  transition: opacity 0.4s, outline 0.15s, border-color 0.15s, transform 0.3s;
+  color: #fff;
+}
+.sc-title { font-size: 11px; font-weight: 700; line-height: 1.25; margin-bottom: 3px; }
+.sc-artist { font-size: 9px; opacity: 0.75; }
+.sc-foot { display: flex; justify-content: space-between; align-items: flex-end; margin-top: auto; padding-top: 4px; }
+.sc-key { font-size: 9px; font-weight: 700; }
+.sc-bpm { font-size: 8px; opacity: 0.7; }
+.sc.selected-cell { outline: 3px solid #000; outline-offset: -1px; z-index: 2; }
+.sc.faded { opacity: 0.12; }
+.sc.is-match { box-shadow: 0 0 0 2px rgba(255,255,255,0.5) inset; }
+.sc.now-playing-cell { outline: 3px solid #fff; outline-offset: -2px; z-index: 2; }
+
+@keyframes tile-pulse {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+.sc.queuing { animation: tile-pulse 0.5s ease-out; }
+
+/* RIGHT PANEL */
+.demo-right {
+  width: 185px;
+  min-width: 185px;
+  border-left: 1px solid #000;
+  display: flex;
+  flex-direction: column;
+  font-size: 9px;
+}
+.rp-section {
+  border-bottom: 1px solid #000;
+  padding: 7px 9px;
+  flex-shrink: 0;
+}
+.rp-section:last-child { border-bottom: none; flex: 1; }
+.rp-head {
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-bottom: 5px;
+  color: #000;
+}
+.rp-now-title {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.3;
+  margin-bottom: 2px;
+  min-height: 14px;
+}
+.rp-now-artist { font-size: 9px; color: #555; margin-bottom: 4px; min-height: 12px; }
+.rp-now-badge {
+  font-size: 8px;
+  font-weight: 700;
+  color: #fff;
+  padding: 2px 5px;
+  display: inline-block;
+  min-width: 20px;
+}
+.queue-list { min-height: 30px; }
+.queue-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 4px;
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+.queue-item.visible { opacity: 1; }
+.queue-dot {
+  width: 8px; height: 8px;
+  flex-shrink: 0;
+  display: inline-block;
+}
+.queue-text { font-size: 9px; line-height: 1.3; }
+.prev-list { min-height: 20px; }
+.prev-item {
+  font-size: 9px;
+  margin-bottom: 3px;
+  color: #555;
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+.prev-item.visible { opacity: 1; }
+.session-section { flex: 1; }
+.session-count { font-size: 10px; font-weight: 700; margin-bottom: 8px; min-height: 14px; }
+.btn-save {
+  display: block;
+  width: 100%;
+  background: #000;
+  color: #fff;
+  border: none;
+  padding: 7px 6px;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  font-family: var(--font);
+  text-align: center;
+  transition: background 0.15s, color 0.15s;
+}
+@keyframes save-pulse {
+  0% { background: #000; color: #fff; }
+  40% { background: #555; color: #fff; }
+  100% { background: #000; color: #fff; }
+}
+.btn-save.pulsing { animation: save-pulse 0.6s ease; }
+
+/* TOAST */
+#toast {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #000;
+  color: #fff;
+  font-size: 10px;
+  padding: 10px 20px;
+  font-family: var(--font);
+  opacity: 0;
+  transition: opacity 0.4s;
+  pointer-events: none;
+  z-index: 1000;
+  white-space: nowrap;
+}
+#toast.visible { opacity: 1; }
+
+/* ANNOTATION NODES — brutalist popup windows */
+.anno {
+  position: absolute;
+  background: #fff;
+  border: 2px solid #000;
+  box-shadow: 3px 3px 0px #000;
+  padding: 8px 12px;
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 500;
+  max-width: 170px;
+  line-height: 1.55;
+  opacity: 0;
+  transition: opacity 0.35s;
+  pointer-events: none;
+  z-index: 20;
+  color: #000;
+}
+.anno.visible { opacity: 1; }
+.anno-1 { top: 14px; left: 165px; }
+.anno-2 { top: 14px; left: 4px; }
+.anno-3 { top: 100px; left: 158px; }
+.anno-4 { top: 200px; right: 195px; }
+.anno-5 { top: 14px; right: 4px; }
+.anno-6 { bottom: 50px; right: 4px; }
+
+/* ─── FEATURES ─── */
+#features { padding: 70px 24px; }
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: #000;
+  border: 1px solid #000;
+}
+.feat-card {
+  background: #fff;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  transition: background 0.3s, color 0.3s;
+}
+.feat-card:hover { color: #fff; }
+.feat-card:hover .feat-icon,
+.feat-card:hover .feat-desc { color: rgba(255,255,255,0.85); }
+.feat-card:nth-child(1):hover  { background: hsl(0,80%,45%); }
+.feat-card:nth-child(2):hover  { background: hsl(45,90%,42%); }
+.feat-card:nth-child(3):hover  { background: hsl(205,80%,44%); }
+.feat-card:nth-child(4):hover  { background: hsl(88,75%,36%); }
+.feat-card:nth-child(5):hover  { background: hsl(255,70%,50%); }
+.feat-card:nth-child(6):hover  { background: hsl(160,70%,36%); }
+.feat-card:nth-child(7):hover  { background: hsl(285,65%,46%); }
+.feat-card:nth-child(8):hover  { background: hsl(22,85%,48%); }
+.feat-card:nth-child(9):hover  { background: hsl(185,75%,38%); }
+.feat-icon {
+  font-size: 11px;
+  font-weight: 700;
+  color: #000;
+  letter-spacing: 0.05em;
+  margin-bottom: 2px;
+  transition: color 0.3s;
+}
+.feat-name {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.feat-desc {
+  font-size: 10px;
+  color: #555;
+  line-height: 1.55;
+  transition: color 0.3s;
+}
+
+/* ─── PALETTE ─── */
+#palette { padding: 70px 24px; }
+.palette-title {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.palette-sub {
+  font-size: 14px;
+  color: #555;
+  margin-bottom: 40px;
+  line-height: 1.5;
+}
+.palette-layout {
+  display: flex;
+  gap: 40px;
+  align-items: flex-start;
+}
+.palette-left { flex-shrink: 0; }
+.palette-rows { display: flex; flex-direction: column; gap: 6px; }
+.palette-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 12px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color 0.15s, background 0.1s;
+}
+.palette-row:hover, .palette-row.active { border-color: #000; background: #f8f8f8; }
+.palette-season {
+  font-size: 13px;
+  font-weight: 700;
+  color: #000;
+  width: 80px;
+  flex-shrink: 0;
+}
+.palette-swatches { display: flex; gap: 2px; }
+.swatch {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+.palette-right {
+  flex: 1;
+  min-width: 0;
+}
+.palette-demo-tiles {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(3, auto);
+  gap: 2px;
+  background: #ccc;
+  border: 1px solid #000;
+}
+.palette-tile {
+  padding: 8px 10px 6px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 66px;
+  transition: background-color 0.3s;
+}
+.pt-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.2;
+  margin-bottom: 2px;
+}
+.pt-artist {
+  font-size: 8px;
+  color: rgba(255,255,255,0.75);
+}
+.pt-key {
+  font-family: var(--mono);
+  font-size: 8px;
+  font-weight: 700;
+  color: #fff;
+  margin-top: auto;
+}
+
+/* ─── DONATION ─── */
+.donation-section {
+  border-top: 1px solid #ddd;
+  padding: 24px 0 0;
+  margin-top: 28px;
+  text-align: center;
+}
+.donation-text {
+  font-size: 13px;
+  color: #555;
+  margin-bottom: 10px;
+}
+.donation-link {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #000;
+  border: 2px solid #000;
+  padding: 8px 20px;
+  text-decoration: none;
+  transition: background 0.1s, color 0.1s;
+}
+.donation-link:hover { background: #000; color: #fff; }
+
+/* ─── CHANGELOG ─── */
+#changelog { padding: 70px 24px; border-top: 1px solid #000; }
+.changelog-entries { display: flex; flex-direction: column; gap: 20px; margin-top: 28px; }
+.changelog-entry { border-left: 3px solid #000; padding-left: 16px; }
+.changelog-date {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: #888;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.changelog-title {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.changelog-desc {
+  font-size: 13px;
+  color: #555;
+  line-height: 1.6;
+}
+
+/* ─── CTA ─── */
+#cta {
+  border-top: 1px solid #000;
+  padding: 80px 24px;
+  text-align: center;
+}
+#cta h2 {
+  font-size: 26px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+#cta p {
+  font-size: 15px;
+  color: #555;
+  margin-bottom: 28px;
+}
+.cta-btn-wrap {
+  max-width: 280px;
+  margin: 0 auto 16px;
+}
+.by-line {
+  font-size: 12px;
+  color: #aaa;
+}
+.by-line a { color: #aaa; }
+
+/* ─── FOOTER ─── */
+footer {
+  border-top: 1px solid #000;
+  padding: 20px 24px;
+  font-size: 10px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  text-align: center;
+}
+footer a { color: inherit; }
+
+/* ─── MOBILE ─── */
+@media (max-width: 700px) {
+  .demo-left, .demo-right { display: none !important; }
+  .demo-grid { grid-template-columns: repeat(2, 1fr); }
+  .anno { display: none !important; }
+  .features-grid { grid-template-columns: 1fr; }
+  .hero-card { padding: 28px 20px 24px; }
+  .hero-brand { font-size: 26px; }
+  .demo-wrapper { border-left: none; border-right: none; }
+  .how-header { padding: 0 16px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ─── SITE NAV ─── -->
+<nav class="site-nav">
+  <a class="site-nav-brand" href="#">billy-fm</a>
+  <a class="site-nav-signin" href="/app/login">sign in</a>
+</nav>
+
+<!-- ─── SECTION 1: HERO ─── -->
+<section id="hero">
+  <div class="hero-card">
+    <div class="hero-brand">billy-fm</div>
+    <div class="hero-tagline">Organize and track your live sets by key, era,<br>tempo, and more. Build and save sets.<br>Share and collect song ideas.</div>
+    <a class="btn-primary" href="/app/login">sign in for free with Google</a>
+  </div>
+</section>
+
+<!-- ─── SECTION 2: HOW IT WORKS ─── -->
+<section id="how" class="section" style="padding-left:0;padding-right:0;border-top:1px solid #000;">
+  <div class="how-header">
+    <div class="how-title">how it works</div>
+    <div class="step-label" id="stepLabel">your full library at a glance</div>
+  </div>
+
+  <div class="demo-wrapper" id="demoWrapper">
+
+    <!-- ANNOTATION NODES -->
+    <div class="anno anno-1" id="anno1">Every song in your library. Color-coded by musical key.</div>
+    <div class="anno anno-2" id="anno2">Select a song. The panel shows key, BPM, chords, and your notes.</div>
+    <div class="anno anno-3" id="anno3">Matched songs surface. Non-matching songs fade out.</div>
+    <div class="anno anno-4" id="anno4">Drag any matched song into your queue.</div>
+    <div class="anno anno-5" id="anno5">Double-click makes it now playing. Your set builds itself.</div>
+    <div class="anno anno-6" id="anno6">End of the night. Set is saved as a playlist.</div>
+
+    <!-- LEFT PANEL -->
+    <div class="demo-left">
+      <div class="demo-left-song" id="dlSong">
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#888;margin-bottom:6px;">selected</div>
+        <div class="dl-empty" id="dlEmpty">no song selected</div>
+        <div class="dl-title" id="dlTitle"></div>
+        <div class="dl-artist" id="dlArtist"></div>
+        <div class="dl-key-badge" id="dlKeyBadge"></div>
+        <div class="dl-bpm" id="dlBpm"></div>
+      </div>
+      <div class="demo-left-filters">
+        <div class="filter-label-head">filters</div>
+        <div class="filter-row">
+          <input type="checkbox" id="ck1"><label for="ck1">Same key / relative</label>
+        </div>
+        <div class="filter-row">
+          <input type="checkbox" id="ck2"><label for="ck2">BPM ±15</label>
+        </div>
+        <div class="filter-row">
+          <input type="checkbox" id="ck3"><label for="ck3">Same era</label>
+        </div>
+        <div class="filter-row">
+          <input type="checkbox" id="ck4"><label for="ck4">Same artist</label>
+        </div>
+        <div class="filter-row">
+          <input type="checkbox" id="ck5"><label for="ck5">Same genre</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- CENTER PANEL -->
+    <div class="demo-center">
+      <div class="demo-controls">
+        <input class="demo-controls-search" type="text" placeholder="search..." readonly>
+        <div class="match-count" id="matchCount">3 matches</div>
+      </div>
+      <div class="demo-grid" id="demoGrid"></div>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div class="demo-right">
+      <div class="rp-section">
+        <div class="rp-head" id="rpNowHead">NOW PLAYING</div>
+        <div class="rp-now-title" id="rpNowTitle">—</div>
+        <div class="rp-now-artist" id="rpNowArtist"></div>
+        <div class="rp-now-badge" id="rpNowBadge"></div>
+      </div>
+      <div class="rp-section">
+        <div class="rp-head" id="rpQueueHead">QUEUE (0)</div>
+        <div class="queue-list" id="queueList"></div>
+      </div>
+      <div class="rp-section">
+        <div class="rp-head">PREV. PLAYED</div>
+        <div class="prev-list" id="prevList"></div>
+      </div>
+      <div class="rp-section session-section">
+        <div class="rp-head">SESSION</div>
+        <div class="session-count" id="sessionCount"></div>
+        <button class="btn-save" id="btnSave">SAVE SET AS PLAYLIST</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- ─── SECTION 3: FEATURES ─── -->
+<section id="features" class="section">
+  <div class="section-inner">
+    <div class="section-title">features</div>
+    <div class="features-grid">
+      <div class="feat-card">
+        <div class="feat-icon">[key]</div>
+        <div class="feat-name">Color-coded by key</div>
+        <div class="feat-desc">Every song gets a color from its musical key. See your library like a palette.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">[≈]</div>
+        <div class="feat-name">Smart filters</div>
+        <div class="feat-desc">Filter by key, BPM range, era, artist, genre, or play frequency.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">▶</div>
+        <div class="feat-name">Live queue</div>
+        <div class="feat-desc">Drag songs into a queue. The night runs itself.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">↑</div>
+        <div class="feat-name">Setlist tracking</div>
+        <div class="feat-desc">Every song you play is logged. Your set is always saved.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">[♩]</div>
+        <div class="feat-name">Chords on demand</div>
+        <div class="feat-desc">One tap opens the chord chart for the current song.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">→</div>
+        <div class="feat-name">Public songbook</div>
+        <div class="feat-desc">Browse songs added by other performers. Add theirs to your library.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">[sp]</div>
+        <div class="feat-name">Spotify import</div>
+        <div class="feat-desc">Import with key and BPM pre-filled from audio features.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">[🔒]</div>
+        <div class="feat-name">Private songs</div>
+        <div class="feat-desc">Songs only you can see. No marketplace exposure.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">~</div>
+        <div class="feat-name">Transition suggestions</div>
+        <div class="feat-desc">Link songs that flow well together. The app suggests what's next.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── SECTION 4: PALETTE PREVIEW ─── -->
+<section id="palette" class="section">
+  <div class="section-inner">
+    <div class="palette-title">your songs. your palette.</div>
+    <div class="palette-sub">5 mood palettes. every key gets a color. hover to preview.</div>
+    <div class="palette-layout">
+      <div class="palette-left">
+        <div class="palette-rows" id="paletteRows"></div>
+      </div>
+      <div class="palette-right">
+        <div class="palette-demo-tiles" id="paletteTiles"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── SECTION 5: CHANGELOG ─── -->
+<section id="changelog" class="section">
+  <div class="section-inner">
+    <div class="section-title">what's new</div>
+    <div class="changelog-entries">
+      <div class="changelog-entry">
+        <div class="changelog-date">Mar 2026</div>
+        <div class="changelog-title">Universal drag & drop + global Now Playing</div>
+        <div class="changelog-desc">Drag songs between all panels — grid to queue, now playing to history, and more. Now Playing persists across all pages so your set never disappears when you navigate.</div>
+      </div>
+      <div class="changelog-entry">
+        <div class="changelog-date">Mar 2026</div>
+        <div class="changelog-title">Key filter, editable tags, favoritable playlists</div>
+        <div class="changelog-desc">Filter your grid instantly by musical key using the new color squares in the sort bar. Tag your songs with custom chips you can edit and remove. Star your favorite playlists to sort them to the top.</div>
+      </div>
+      <div class="changelog-entry">
+        <div class="changelog-date">Feb 2026</div>
+        <div class="changelog-title">Playlist detail page + transition indicators</div>
+        <div class="changelog-desc">Full playlist view with inline title editing, notes, drag-to-reorder, and transition indicators between songs that flow well together.</div>
+      </div>
+      <div class="changelog-entry">
+        <div class="changelog-date">Feb 2026</div>
+        <div class="changelog-title">Spotify import, chords, and private songs</div>
+        <div class="changelog-desc">Import songs directly from Spotify with key and BPM auto-filled. Add chords URLs per song. Mark songs private so they never appear in the public songbook.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── SECTION 6: CTA ─── -->
+<section id="cta">
+  <h2>ready to start?</h2>
+  <p>free for performers. no credit card.</p>
+  <div class="cta-btn-wrap">
+    <a class="btn-primary" href="/app/login">sign in for free with Google</a>
+  </div>
+  <div class="donation-section">
+    <div class="donation-text">This app is built and maintained by one person. If it's useful to you, consider supporting it.</div>
+    <a class="donation-link" href="https://venmo.com/conorthaxter" target="_blank" rel="noopener">Support on Venmo ♥</a>
+  </div>
+</section>
+
+<!-- ─── SECTION 6: FOOTER ─── -->
+<footer>
+  <span>billy-fm</span>
+  <span>·</span>
+  <a href="https://conor.bio">by conor</a>
+  <span>·</span>
+  <a href="https://venmo.com/conorthaxter">tip ♥</a>
+  <span>·</span>
+  <span>© 2026</span>
+</footer>
+
+<script>
+// ─── DATA ───────────────────────────────────────────────────────────────────
+const SONGS = [
+  { title: "Kill Bill",             artist: "SZA",               key: "Db",  bpm: 90  },
+  { title: "Thinking Bout You",     artist: "Frank Ocean",       key: "Eb",  bpm: 82  },
+  { title: "Pynk",                  artist: "Janelle Monáe",     key: "Ab",  bpm: 108 },
+  { title: "Royals",                artist: "Lorde",             key: "D",   bpm: 86  },
+  { title: "Toxic",                 artist: "Britney Spears",    key: "Cm",  bpm: 143 },
+  { title: "Respect",               artist: "Aretha Franklin",   key: "C",   bpm: 114 },
+  { title: "Suspense",              artist: "Caroline Polachek", key: "F#m", bpm: 130 },
+  { title: "Superstition",          artist: "Stevie Wonder",     key: "Eb",  bpm: 100 },
+  { title: "Good as Hell",          artist: "Lizzo",             key: "G",   bpm: 96  },
+  { title: "Jailhouse Rock",        artist: "Elvis Presley",     key: "Bb",  bpm: 168 },
+  { title: "Stayin' Alive",         artist: "Bee Gees",          key: "Fm",  bpm: 104 },
+  { title: "Levitating",            artist: "Dua Lipa",          key: "B",   bpm: 103 },
+  { title: "Cruel Summer",          artist: "Taylor Swift",      key: "A",   bpm: 170 },
+  { title: "Escapism.",             artist: "RAYE",              key: "Am",  bpm: 130 },
+  { title: "Solar Power",           artist: "Lorde",             key: "E",   bpm: 100 },
+  { title: "Vogue",                 artist: "Madonna",           key: "Gm",  bpm: 120 },
+];
+
+const KEY_COLORS = {
+  'C':  'hsl(0,80%,45%)',   'C#': 'hsl(22,85%,48%)',  'D':  'hsl(45,90%,42%)',
+  'D#': 'hsl(65,80%,38%)', 'Eb': 'hsl(65,80%,38%)',  'E':  'hsl(88,75%,36%)',
+  'F':  'hsl(160,70%,36%)','F#': 'hsl(185,75%,38%)', 'Gb': 'hsl(185,75%,38%)',
+  'G':  'hsl(205,80%,44%)','G#': 'hsl(225,75%,46%)', 'Ab': 'hsl(225,75%,46%)',
+  'A':  'hsl(255,70%,50%)','A#': 'hsl(285,65%,46%)', 'Bb': 'hsl(285,65%,46%)',
+  'B':  'hsl(320,75%,44%)',
+  'Am': 'hsl(0,75%,37%)',  'Em': 'hsl(205,75%,36%)', 'Gm': 'hsl(285,60%,38%)',
+  'Dm': 'hsl(160,65%,28%)','Bm': 'hsl(45,85%,34%)',  'F#m':'hsl(255,65%,42%)',
+};
+
+// ─── BUILD DEMO GRID ────────────────────────────────────────────────────────
+const grid = document.getElementById('demoGrid');
+SONGS.forEach((song, i) => {
+  const color = KEY_COLORS[song.key] || '#888';
+  const el = document.createElement('div');
+  el.className = 'sc';
+  el.style.backgroundColor = color;
+  el.dataset.idx = i;
+  el.dataset.key = song.key;
+  el.innerHTML = `
+    <div>
+      <div class="sc-title">${song.title}</div>
+      <div class="sc-artist">${song.artist}</div>
+    </div>
+    <div class="sc-foot">
+      <span class="sc-key">${song.key}</span>
+      <span class="sc-bpm">${song.bpm}</span>
+    </div>
+  `;
+  grid.appendChild(el);
+});
+
+function getTile(idx) { return grid.querySelector(`.sc[data-idx="${idx}"]`); }
+
+// ─── PALETTE SECTION ─────────────────────────────────────────────────────────
+const KEY_NAMES = ['C','C#','D','Eb','E','F','F#','G','Ab','A','Bb','B'];
+
+const PALETTES = {
+  festival: [
+    'hsl(0,80%,45%)','hsl(22,85%,48%)','hsl(45,90%,42%)','hsl(65,80%,38%)',
+    'hsl(88,75%,36%)','hsl(160,70%,36%)','hsl(185,75%,38%)','hsl(205,80%,44%)',
+    'hsl(225,75%,46%)','hsl(255,70%,50%)','hsl(285,65%,46%)','hsl(320,75%,44%)',
+  ],
+  session: [
+    'hsl(348,55%,62%)','hsl(15,58%,60%)','hsl(42,60%,58%)','hsl(68,50%,55%)',
+    'hsl(140,45%,52%)','hsl(168,52%,50%)','hsl(188,58%,52%)','hsl(210,60%,58%)',
+    'hsl(232,55%,62%)','hsl(258,52%,64%)','hsl(282,48%,58%)','hsl(318,52%,60%)',
+  ],
+  jazzbar: [
+    'hsl(355,55%,32%)','hsl(18,60%,30%)','hsl(38,55%,28%)','hsl(55,45%,26%)',
+    'hsl(85,40%,25%)','hsl(155,45%,26%)','hsl(178,50%,28%)','hsl(210,55%,32%)',
+    'hsl(230,50%,34%)','hsl(260,50%,36%)','hsl(285,45%,32%)','hsl(325,50%,32%)',
+  ],
+  cafe: [
+    'hsl(5,28%,48%)','hsl(22,32%,45%)','hsl(38,35%,42%)','hsl(55,22%,44%)',
+    'hsl(82,18%,42%)','hsl(142,18%,40%)','hsl(168,22%,42%)','hsl(195,25%,45%)',
+    'hsl(215,22%,48%)','hsl(238,20%,48%)','hsl(268,18%,45%)','hsl(308,22%,46%)',
+  ],
+  dive: [
+    'hsl(350,85%,58%)','hsl(15,80%,55%)','hsl(52,82%,50%)','hsl(78,75%,48%)',
+    'hsl(120,80%,44%)','hsl(162,78%,42%)','hsl(182,82%,46%)','hsl(205,85%,52%)',
+    'hsl(232,80%,56%)','hsl(262,78%,58%)','hsl(288,75%,52%)','hsl(328,82%,54%)',
+  ],
+};
+
+const PALETTE_LABELS = {
+  festival: 'Festival',
+  session:  'Session',
+  jazzbar:  'Jazz Bar',
+  cafe:     'Café',
+  dive:     'Dive',
+};
+
+// Demo songs for palette preview tiles (12 shown — one per key, 3 rows of 4)
+const PALETTE_SONGS = [
+  { title: "Respect",       artist: "Aretha Franklin",   keyIdx: 0  }, // C
+  { title: "Kill Bill",     artist: "SZA",               keyIdx: 1  }, // C#
+  { title: "Royals",        artist: "Lorde",             keyIdx: 2  }, // D
+  { title: "Toxic",         artist: "Britney Spears",    keyIdx: 3  }, // Eb
+  { title: "Solar Power",   artist: "Lorde",             keyIdx: 4  }, // E
+  { title: "Stayin' Alive", artist: "Bee Gees",          keyIdx: 5  }, // F
+  { title: "Good as Hell",  artist: "Lizzo",             keyIdx: 6  }, // F#
+  { title: "Vogue",         artist: "Madonna",           keyIdx: 7  }, // G
+  { title: "Pynk",          artist: "Janelle Monáe",     keyIdx: 8  }, // Ab
+  { title: "Cruel Summer",  artist: "Taylor Swift",      keyIdx: 9  }, // A
+  { title: "Jailhouse Rock",artist: "Elvis Presley",     keyIdx: 10 }, // Bb
+  { title: "Levitating",    artist: "Dua Lipa",          keyIdx: 11 }, // B
+];
+
+// Build palette tiles on right
+const paletteTiles = document.getElementById('paletteTiles');
+PALETTE_SONGS.forEach((song, i) => {
+  const tile = document.createElement('div');
+  tile.className = 'palette-tile';
+  tile.dataset.songIdx = i;
+  tile.innerHTML = `
+    <div>
+      <div class="pt-title">${song.title}</div>
+      <div class="pt-artist">${song.artist}</div>
+    </div>
+    <div class="pt-key">${KEY_NAMES[song.keyIdx]}</div>
+  `;
+  paletteTiles.appendChild(tile);
+});
+
+// ─── FLOATING HERO TILES ──────────────────────────────────────────────────────
+// Darken an hsl(...) string by reducing lightness
+function darkenHsl(hslStr, amount) {
+  const m = hslStr.match(/hsl\((\d+),(\d+)%,(\d+)%\)/);
+  if (!m) return hslStr;
+  return `hsl(${m[1]},${m[2]}%,${Math.max(0, parseInt(m[3]) - amount)}%)`;
+}
+
+const FLOAT_SONGS = [
+  { title: "Cruel Summer",   artist: "Taylor Swift",  key: "A"  },
+  { title: "Levitating",     artist: "Dua Lipa",      key: "B"  },
+  { title: "Pynk",           artist: "Janelle Monáe", key: "Ab" },
+  { title: "Solar Power",    artist: "Lorde",         key: "E"  },
+  { title: "Royals",         artist: "Lorde",         key: "D"  },
+  { title: "Superstition",   artist: "Stevie Wonder", key: "Eb" },
+];
+
+const FLOAT_ZONES = [
+  { left: '3%',  top: '18%' },
+  { left: '3%',  top: '58%' },
+  { left: '72%', top: '18%' },
+  { left: '72%', top: '58%' },
+  { left: '12%', top: '80%' },
+  { left: '62%', top: '80%' },
+];
+
+const hero = document.getElementById('hero');
+const floatTiles = FLOAT_SONGS.map((song, i) => {
+  const el = document.createElement('div');
+  el.className = 'hero-float';
+  el.style.backgroundColor = darkenHsl(KEY_COLORS[song.key] || 'hsl(0,0%,50%)', 14);
+  el.style.left = FLOAT_ZONES[i].left;
+  el.style.top  = FLOAT_ZONES[i].top;
+  el.innerHTML = `<div class="hf-title">${song.title}</div><div class="hf-artist">${song.artist}</div><div class="hf-key">${song.key}</div>`;
+  hero.appendChild(el);
+  return el;
+});
+
+let visibleCount = 0;
+const MAX_VISIBLE = 2;
+
+function cycleFloat(el, initialDelay) {
+  setTimeout(function loop() {
+    if (visibleCount < MAX_VISIBLE) {
+      visibleCount++;
+      el.classList.add('visible');
+      setTimeout(() => {
+        el.classList.remove('visible');
+        visibleCount = Math.max(0, visibleCount - 1);
+        const pause = 3000 + Math.random() * 4000;
+        setTimeout(loop, pause + 300);
+      }, 2000);
+    } else {
+      setTimeout(loop, 800);
+    }
+  }, initialDelay);
+}
+
+floatTiles.forEach((el, i) => cycleFloat(el, 1000 + i * 1200));
+
+// ─── PALETTE SECTION ──────────────────────────────────────────────────────────
+function applyPalette(name) {
+  const colors = PALETTES[name];
+
+  // Palette demo tiles
+  paletteTiles.querySelectorAll('.palette-tile').forEach((tile, i) => {
+    tile.style.backgroundColor = colors[PALETTE_SONGS[i].keyIdx];
+  });
+
+  // Hero floating tiles — use darkened palette colors
+  floatTiles.forEach((el, i) => {
+    const key = FLOAT_SONGS[i].key;
+    const idx = KEY_NAMES.indexOf(key);
+    if (idx >= 0) el.style.backgroundColor = darkenHsl(colors[idx], 14);
+  });
+
+  // Feature card hover colors (injected <style>)
+  // Map feature cards 1-9 to palette colors by key index
+  const featKeyIdxs = [0, 2, 7, 4, 5, 6, 10, 1, 9]; // C, D, G, E, F, F#, Bb, C#, A
+  const featCss = featKeyIdxs.map((ki, i) =>
+    `.feat-card:nth-child(${i + 1}):hover { background: ${colors[ki]}; }`
+  ).join('\n');
+
+  // btn-key-cycle animation
+  const cycleIdxs = [0, 1, 4, 5, 7, 9, 10, 11]; // C, C#, E, F, G, A, Bb, B
+  const stops = [0, 12, 24, 36, 48, 60, 72, 84];
+  const btnFrames = cycleIdxs.map((ki, i) => `${stops[i]}% { background: ${colors[ki]}; }`).join('\n');
+  const btnCss = `@keyframes btn-key-cycle {\n${btnFrames}\n100% { background: ${colors[cycleIdxs[0]]}; }\n}`;
+
+  let styleTag = document.getElementById('palette-dynamic-style');
+  if (!styleTag) {
+    styleTag = document.createElement('style');
+    styleTag.id = 'palette-dynamic-style';
+    document.head.appendChild(styleTag);
+  }
+  styleTag.textContent = featCss + '\n' + btnCss;
+}
+
+// Build palette rows on left
+const paletteRows = document.getElementById('paletteRows');
+let activePaletteRow = null;
+Object.keys(PALETTES).forEach((name, idx) => {
+  const row = document.createElement('div');
+  row.className = 'palette-row' + (idx === 0 ? ' active' : '');
+  if (idx === 0) activePaletteRow = row;
+  const lbl = document.createElement('div');
+  lbl.className = 'palette-season';
+  lbl.textContent = PALETTE_LABELS[name];
+  const swatches = document.createElement('div');
+  swatches.className = 'palette-swatches';
+  PALETTES[name].forEach(color => {
+    const sw = document.createElement('div');
+    sw.className = 'swatch';
+    sw.style.backgroundColor = color;
+    swatches.appendChild(sw);
+  });
+  row.appendChild(lbl);
+  row.appendChild(swatches);
+  row.addEventListener('mouseenter', () => {
+    if (activePaletteRow) activePaletteRow.classList.remove('active');
+    row.classList.add('active');
+    activePaletteRow = row;
+    applyPalette(name);
+  });
+  paletteRows.appendChild(row);
+});
+
+// Apply default palette
+applyPalette('festival');
+
+// ─── ANIMATION STATE MACHINE ──────────────────────────────────────────────────
+let animTimer = null;
+let currentStep = 0;
+let animRunning = false;
+
+const STEP_DURATIONS = [4000, 5000, 6000, 6000, 6000, 5000];
+
+function showAnno(id, delay, hideAt) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  setTimeout(() => el.classList.add('visible'), delay);
+  if (hideAt > 0) {
+    setTimeout(() => el.classList.remove('visible'), hideAt);
+  }
+}
+
+function hideAllAnnos() {
+  for (let i = 1; i <= 6; i++) {
+    const el = document.getElementById('anno' + i);
+    if (el) el.classList.remove('visible');
+  }
+}
+
+function clearStep() {
+  // Clear tile classes
+  grid.querySelectorAll('.sc').forEach(t => {
+    t.classList.remove('selected-cell','faded','is-match','now-playing-cell','queuing');
+  });
+
+  // Restore original tile order
+  const tiles = Array.from(grid.querySelectorAll('.sc'));
+  tiles.sort((a, b) => parseInt(a.dataset.idx) - parseInt(b.dataset.idx));
+  tiles.forEach(t => grid.appendChild(t));
+
+  // Reset left panel
+  document.getElementById('dlEmpty').style.display = '';
+  document.getElementById('dlTitle').style.display = 'none';
+  document.getElementById('dlArtist').style.display = 'none';
+  document.getElementById('dlKeyBadge').style.display = 'none';
+  document.getElementById('dlBpm').style.display = 'none';
+  document.getElementById('ck1').checked = false;
+
+  // Reset match count
+  const mc = document.getElementById('matchCount');
+  mc.classList.remove('visible');
+
+  // Reset right panel
+  document.getElementById('rpNowTitle').textContent = '—';
+  document.getElementById('rpNowArtist').textContent = '';
+  document.getElementById('rpNowBadge').textContent = '';
+  document.getElementById('rpNowBadge').style.backgroundColor = '';
+  document.getElementById('rpQueueHead').textContent = 'QUEUE (0)';
+  document.getElementById('queueList').innerHTML = '';
+  document.getElementById('prevList').innerHTML = '';
+  document.getElementById('sessionCount').textContent = '';
+  document.getElementById('btnSave').classList.remove('pulsing');
+
+  // Hide toast
+  const toast = document.getElementById('toast');
+  toast.classList.remove('visible');
+
+  hideAllAnnos();
+}
+
+function showLeftPanelSong(song) {
+  document.getElementById('dlEmpty').style.display = 'none';
+  const titleEl = document.getElementById('dlTitle');
+  titleEl.textContent = song.title;
+  titleEl.style.display = '';
+
+  const artistEl = document.getElementById('dlArtist');
+  artistEl.textContent = song.artist;
+  artistEl.style.display = '';
+
+  const badge = document.getElementById('dlKeyBadge');
+  badge.textContent = song.key;
+  badge.style.backgroundColor = KEY_COLORS[song.key] || '#888';
+  badge.style.display = '';
+
+  const bpmEl = document.getElementById('dlBpm');
+  bpmEl.textContent = song.bpm + ' BPM';
+  bpmEl.style.display = '';
+}
+
+function runStep(n) {
+  if (!animRunning) return;
+  currentStep = n;
+  clearStep();
+
+  const dur = STEP_DURATIONS[n];
+  const annoShowDelay = 400;
+  const annoHideAt = dur - 600;
+
+  if (n === 0) {
+    // Step 1 — full library at a glance
+    document.getElementById('stepLabel').textContent = 'your full library at a glance';
+    showAnno('anno1', annoShowDelay, annoHideAt);
+
+  } else if (n === 1) {
+    // Step 2 — select a song
+    document.getElementById('stepLabel').textContent = 'select a song to filter';
+    const tile0 = getTile(0);
+    if (tile0) tile0.classList.add('selected-cell');
+    showLeftPanelSong(SONGS[0]);
+    showAnno('anno2', annoShowDelay, annoHideAt);
+
+  } else if (n === 2) {
+    // Step 3 — filter by key
+    document.getElementById('stepLabel').textContent = 'filter by key — matched songs group together';
+
+    // Keep selected
+    const tile0 = getTile(0);
+    if (tile0) tile0.classList.add('selected-cell');
+    showLeftPanelSong(SONGS[0]);
+
+    // Tick checkbox
+    setTimeout(() => {
+      document.getElementById('ck1').checked = true;
+    }, 400);
+
+    // Matches: Mercy Mercy Me (idx 13, Ab), Superstition (idx 1, Eb), Higher Ground (idx 5, Eb)
+    const matchIndices = [13, 1, 5];
+    setTimeout(() => {
+      grid.querySelectorAll('.sc').forEach(t => {
+        const idx = parseInt(t.dataset.idx);
+        if (idx === 0) {
+          // keep selected
+        } else if (matchIndices.includes(idx)) {
+          t.classList.add('is-match');
+        } else {
+          t.classList.add('faded');
+        }
+      });
+
+      // Reorder: selected first, then matches, then rest
+      const allTiles = Array.from(grid.querySelectorAll('.sc'));
+      const selected = allTiles.filter(t => t.classList.contains('selected-cell'));
+      const matches  = allTiles.filter(t => t.classList.contains('is-match'));
+      const faded    = allTiles.filter(t => t.classList.contains('faded'));
+      [...selected, ...matches, ...faded].forEach(t => grid.appendChild(t));
+
+      const mc = document.getElementById('matchCount');
+      mc.textContent = '3 matches';
+      mc.classList.add('visible');
+    }, 600);
+
+    showAnno('anno3', annoShowDelay + 700, annoHideAt);
+
+  } else if (n === 3) {
+    // Step 4 — queue it
+    document.getElementById('stepLabel').textContent = 'build your queue';
+
+    // Carry forward filter state
+    const tile0 = getTile(0);
+    if (tile0) tile0.classList.add('selected-cell');
+    showLeftPanelSong(SONGS[0]);
+    document.getElementById('ck1').checked = true;
+
+    const matchIndices = [13, 1, 5];
+    grid.querySelectorAll('.sc').forEach(t => {
+      const idx = parseInt(t.dataset.idx);
+      if (idx === 0) {
+        // selected
+      } else if (matchIndices.includes(idx)) {
+        t.classList.add('is-match');
+      } else {
+        t.classList.add('faded');
+      }
+    });
+    const allTiles = Array.from(grid.querySelectorAll('.sc'));
+    const selected = allTiles.filter(t => t.classList.contains('selected-cell'));
+    const matches  = allTiles.filter(t => t.classList.contains('is-match'));
+    const faded    = allTiles.filter(t => t.classList.contains('faded'));
+    [...selected, ...matches, ...faded].forEach(t => grid.appendChild(t));
+
+    const mc = document.getElementById('matchCount');
+    mc.textContent = '3 matches';
+    mc.classList.add('visible');
+
+    // Pulse Superstition tile
+    setTimeout(() => {
+      const tile1 = getTile(1);
+      if (tile1) {
+        tile1.classList.add('queuing');
+        setTimeout(() => tile1.classList.remove('queuing'), 600);
+      }
+
+      // Add to queue
+      document.getElementById('rpQueueHead').textContent = 'QUEUE (1)';
+      const qEl = document.createElement('div');
+      qEl.className = 'queue-item';
+      const dot = document.createElement('span');
+      dot.className = 'queue-dot';
+      dot.style.backgroundColor = KEY_COLORS['Eb'];
+      const txt = document.createElement('span');
+      txt.className = 'queue-text';
+      txt.textContent = 'Superstition — Eb · 100 BPM';
+      qEl.appendChild(dot);
+      qEl.appendChild(txt);
+      document.getElementById('queueList').appendChild(qEl);
+      requestAnimationFrame(() => requestAnimationFrame(() => qEl.classList.add('visible')));
+    }, 800);
+
+    showAnno('anno4', annoShowDelay + 900, annoHideAt);
+
+  } else if (n === 4) {
+    // Step 5 — now playing
+    document.getElementById('stepLabel').textContent = 'double-click — now playing';
+
+    // Carry forward
+    showLeftPanelSong(SONGS[0]);
+    document.getElementById('ck1').checked = true;
+
+    const matchIndices = [13, 1, 5];
+    grid.querySelectorAll('.sc').forEach(t => {
+      const idx = parseInt(t.dataset.idx);
+      if (idx === 13) {
+        t.classList.add('now-playing-cell');
+      } else if (matchIndices.includes(idx) && idx !== 13) {
+        t.classList.add('is-match');
+      } else if (idx !== 0) {
+        t.classList.add('faded');
+      } else {
+        // tile 0 selected for ref
+      }
+    });
+
+    const allTiles = Array.from(grid.querySelectorAll('.sc'));
+    const nowpl   = allTiles.filter(t => t.classList.contains('now-playing-cell'));
+    const matches  = allTiles.filter(t => t.classList.contains('is-match'));
+    const faded    = allTiles.filter(t => t.classList.contains('faded'));
+    const rest     = allTiles.filter(t => !t.classList.contains('now-playing-cell') && !t.classList.contains('is-match') && !t.classList.contains('faded'));
+    [...nowpl, ...rest, ...matches, ...faded].forEach(t => grid.appendChild(t));
+
+    const mc = document.getElementById('matchCount');
+    mc.textContent = '3 matches';
+    mc.classList.add('visible');
+
+    // Queue still shown
+    document.getElementById('rpQueueHead').textContent = 'QUEUE (1)';
+    const qEl = document.createElement('div');
+    qEl.className = 'queue-item visible';
+    const dot = document.createElement('span');
+    dot.className = 'queue-dot';
+    dot.style.backgroundColor = KEY_COLORS['Eb'];
+    const txt = document.createElement('span');
+    txt.className = 'queue-text';
+    txt.textContent = 'Superstition — Eb · 100 BPM';
+    qEl.appendChild(dot);
+    qEl.appendChild(txt);
+    document.getElementById('queueList').appendChild(qEl);
+
+    // Now playing
+    setTimeout(() => {
+      const npTitle  = document.getElementById('rpNowTitle');
+      const npArtist = document.getElementById('rpNowArtist');
+      const npBadge  = document.getElementById('rpNowBadge');
+      npTitle.textContent  = 'Mercy Mercy Me';
+      npArtist.textContent = 'Marvin Gaye';
+      npBadge.textContent  = 'Ab';
+      npBadge.style.backgroundColor = KEY_COLORS['Ab'];
+
+      // Prev played
+      const pEl = document.createElement('div');
+      pEl.className = 'prev-item';
+      pEl.textContent = "What's Going On";
+      document.getElementById('prevList').appendChild(pEl);
+      requestAnimationFrame(() => requestAnimationFrame(() => pEl.classList.add('visible')));
+    }, 600);
+
+    showAnno('anno5', annoShowDelay + 700, annoHideAt);
+
+  } else if (n === 5) {
+    // Step 6 — save the set
+    document.getElementById('stepLabel').textContent = 'save set as playlist';
+
+    // Carry state
+    document.getElementById('ck1').checked = true;
+
+    grid.querySelectorAll('.sc').forEach(t => {
+      const idx = parseInt(t.dataset.idx);
+      if (idx === 13) t.classList.add('now-playing-cell');
+      else if ([1, 5].includes(idx)) t.classList.add('is-match');
+      else t.classList.add('faded');
+    });
+
+    // Right panel state
+    document.getElementById('rpNowTitle').textContent  = 'Mercy Mercy Me';
+    document.getElementById('rpNowArtist').textContent = 'Marvin Gaye';
+    const npBadge = document.getElementById('rpNowBadge');
+    npBadge.textContent = 'Ab';
+    npBadge.style.backgroundColor = KEY_COLORS['Ab'];
+
+    document.getElementById('rpQueueHead').textContent = 'QUEUE (1)';
+    const qEl = document.createElement('div');
+    qEl.className = 'queue-item visible';
+    const dot = document.createElement('span');
+    dot.className = 'queue-dot';
+    dot.style.backgroundColor = KEY_COLORS['Eb'];
+    const txt = document.createElement('span');
+    txt.className = 'queue-text';
+    txt.textContent = 'Superstition — Eb · 100 BPM';
+    qEl.appendChild(dot);
+    qEl.appendChild(txt);
+    document.getElementById('queueList').appendChild(qEl);
+
+    const pEl = document.createElement('div');
+    pEl.className = 'prev-item visible';
+    pEl.textContent = "What's Going On";
+    document.getElementById('prevList').appendChild(pEl);
+
+    // Session count
+    document.getElementById('sessionCount').textContent = '5 played';
+
+    // Pulse save button + show toast
+    setTimeout(() => {
+      const btn = document.getElementById('btnSave');
+      btn.classList.add('pulsing');
+      setTimeout(() => btn.classList.remove('pulsing'), 700);
+
+      const toast = document.getElementById('toast');
+      toast.textContent = 'Thu, Mar 20 · saved (5 songs)';
+      toast.classList.add('visible');
+      setTimeout(() => toast.classList.remove('visible'), 2200);
+    }, 800);
+
+    showAnno('anno6', annoShowDelay + 900, annoHideAt);
+  }
+
+  // Schedule next step
+  animTimer = setTimeout(() => {
+    const next = (n + 1) % 6;
+    if (next === 0) {
+      // brief pause before looping
+      animTimer = setTimeout(() => runStep(0), 2000);
+    } else {
+      runStep(next);
+    }
+  }, dur);
+}
+
+function startAnim() {
+  if (animRunning) return;
+  animRunning = true;
+  runStep(0);
+}
+
+function stopAnim() {
+  animRunning = false;
+  if (animTimer) { clearTimeout(animTimer); animTimer = null; }
+  clearStep();
+}
+
+// IntersectionObserver to start/stop
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      startAnim();
+    } else {
+      stopAnim();
+    }
+  });
+}, { threshold: 0.2 });
+
+observer.observe(document.getElementById('demoWrapper'));
+
+</script>
+</body>
 </html>

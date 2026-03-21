@@ -5,25 +5,69 @@ import { SESSION_COOKIE, parseCookies, type AuthRequest } from './middleware';
 const SESSION_TTL_DAYS = 30;
 
 // ---------------------------------------------------------------------------
+// HMAC-signed OAuth state (cookie-free CSRF protection)
+//
+// State format: `<uuid>.<timestamp_ms>.<base64_hmac_sha256>`
+// The HMAC covers `<uuid>.<timestamp_ms>` using SESSION_SECRET.
+// Expiry: 10 minutes from generation.
+// ---------------------------------------------------------------------------
+
+async function createOAuthState(secret: string): Promise<string> {
+  const payload = `${crypto.randomUUID()}.${Date.now()}`;
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  const sigBuf = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload));
+  const sig = btoa(String.fromCharCode(...new Uint8Array(sigBuf)));
+  return `${payload}.${sig}`;
+}
+
+async function verifyOAuthState(state: string, secret: string): Promise<boolean> {
+  const lastDot = state.lastIndexOf('.');
+  if (lastDot === -1) return false;
+  const payload = state.slice(0, lastDot);
+  const sig     = state.slice(lastDot + 1);
+
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['verify'],
+  );
+  const sigBuf = Uint8Array.from(atob(sig), c => c.charCodeAt(0));
+  const valid  = await crypto.subtle.verify('HMAC', key, sigBuf, new TextEncoder().encode(payload));
+  if (!valid) return false;
+
+  // Check timestamp — state expires after 10 minutes
+  const ts = parseInt(payload.split('.').at(-1) ?? '0', 10);
+  return Date.now() - ts <= 10 * 60 * 1000;
+}
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 function makeSessionCookie(id: string, clear = false): string {
   if (clear) {
-    return `${SESSION_COOKIE}=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0`;
+    return `${SESSION_COOKIE}=; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=0`;
   }
-  return `${SESSION_COOKIE}=${id}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${SESSION_TTL_DAYS * 86400}`;
+  return `${SESSION_COOKIE}=${id}; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=${SESSION_TTL_DAYS * 86400}`;
 }
 
 // ---------------------------------------------------------------------------
 // GET /auth/google — redirect to Google's OAuth consent screen
 // ---------------------------------------------------------------------------
 
-export function handleGoogleRedirect(
+export async function handleGoogleRedirect(
   _request: IRequest,
   env: Env,
-): Response {
-  const state = crypto.randomUUID();
+): Promise<Response> {
+  const state = await createOAuthState(env.SESSION_SECRET);
 
   const params = new URLSearchParams({
     client_id: env.GOOGLE_CLIENT_ID,
@@ -35,13 +79,10 @@ export function handleGoogleRedirect(
     prompt: 'select_account',
   });
 
-  const headers = new Headers({
-    Location: `https://accounts.google.com/o/oauth2/v2/auth?${params}`,
-    // Short-lived state cookie for CSRF verification in the callback
-    'Set-Cookie': `oauth_state=${state}; HttpOnly; Secure; SameSite=Lax; Path=/auth; Max-Age=600`,
+  return new Response(null, {
+    status: 302,
+    headers: { Location: `https://accounts.google.com/o/oauth2/v2/auth?${params}` },
   });
-
-  return new Response(null, { status: 302, headers });
 }
 
 // ---------------------------------------------------------------------------
@@ -58,9 +99,8 @@ export async function handleGoogleCallback(
 
   if (!code) return error(400, { error: 'Missing authorization code' });
 
-  // Verify CSRF state
-  const cookies = parseCookies(request.headers.get('Cookie'));
-  if (!state || cookies['oauth_state'] !== state) {
+  // Verify CSRF state (HMAC-signed, no cookie required)
+  if (!state || !(await verifyOAuthState(state, env.SESSION_SECRET))) {
     return error(400, { error: 'Invalid OAuth state' });
   }
 
@@ -143,13 +183,9 @@ export async function handleGoogleCallback(
     .run();
 
   // Redirect to frontend, set session cookie, clear the CSRF state cookie
-  const redirectTo = env.FRONTEND_ORIGIN || 'http://localhost:5173';
+  const redirectTo = (env.FRONTEND_ORIGIN || 'http://localhost:5173') + '/app';
   const headers = new Headers({ Location: redirectTo });
   headers.append('Set-Cookie', makeSessionCookie(sessionId));
-  headers.append(
-    'Set-Cookie',
-    'oauth_state=; HttpOnly; Secure; SameSite=Lax; Path=/auth; Max-Age=0',
-  );
 
   return new Response(null, { status: 302, headers });
 }

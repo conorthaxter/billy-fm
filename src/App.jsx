@@ -171,7 +171,7 @@ export default function App() {
   });
 
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/app">
       <SettingsProvider>
         <AuthProvider>
           <PlayStateProvider>

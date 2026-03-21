@@ -3,6 +3,7 @@ import {
   corsPreflight,
   corsify,
   withAuth,
+  withAuthOrService,
   type AuthRequest,
 } from './middleware';
 import {
@@ -44,6 +45,7 @@ export interface Env {
   GOOGLE_CLIENT_SECRET: string;
   GOOGLE_REDIRECT_URI: string;
   SESSION_SECRET: string; // reserved for future signed-token use
+  BILLY_FM_SERVICE_KEY: string;
   SPOTIFY_CLIENT_ID: string;
   SPOTIFY_CLIENT_SECRET: string;
 }
@@ -83,7 +85,7 @@ router.get('/auth/me', withAuth, handleMe);
 // Songs (global marketplace)
 // ---------------------------------------------------------------------------
 
-router.get('/api/songs',     listSongs);
+router.get('/api/songs',     withAuthOrService, listSongs);
 router.get('/api/songs/:id', getSong);
 router.post('/api/songs',        withAuth, createSong);
 router.patch('/api/songs/:id',   withAuth, patchSong);
@@ -103,9 +105,9 @@ router.delete('/api/library/:songId',  withAuth, removeFromLibrary);
 // ---------------------------------------------------------------------------
 
 router.get('/api/playlists',                          withAuth, listPlaylists);
-router.post('/api/playlists',                         withAuth, createPlaylist);
+router.post('/api/playlists',                         withAuthOrService, createPlaylist);
 router.get('/api/playlists/:id',                      withAuth, getPlaylist);
-router.patch('/api/playlists/:id',                    withAuth, patchPlaylist);
+router.patch('/api/playlists/:id',                    withAuthOrService, patchPlaylist);
 router.delete('/api/playlists/:id',                   withAuth, deletePlaylist);
 router.put('/api/playlists/:id/songs',                withAuth, setPlaylistSongs);
 router.patch('/api/playlists/:id/songs/:songId',      withAuth, patchPlaylistSong);
