@@ -13,7 +13,7 @@ const GENRES = [
   'Alternative','Indie','Punk','Classical','Reggae',
 ];
 
-const ERAS = ['50s','60s','70s','80s','90s','2000s','2010s','2020s'];
+const ERAS = ['50s','60s','70s','80s','90s','2000s','2010s','2020s','Unknown'];
 
 const MAJOR_KEYS = ['C','C#','D','Eb','E','F','F#','G','Ab','A','Bb','B'];
 const MINOR_KEYS = ['Am','Bm','Cm','Dm','Em','Fm','Gm','Abm','Bbm','C#m','Ebm','F#m'];
@@ -341,7 +341,7 @@ export default function MarketplacePage() {
     const p = { limit: LIMIT, page: pg, sort };
     if (debouncedSearch)     p.search = debouncedSearch;
     if (selectedGenres.size) p.genre  = [...selectedGenres].join(',');
-    if (selectedEras.size)   p.era    = [...selectedEras].join(',');
+    if (selectedEras.size)   p.era    = [...selectedEras].map(e => e === 'Unknown' ? '__null__' : e).join(',');
     if (selectedKey)         p.key    = selectedKey;
     return p;
   }

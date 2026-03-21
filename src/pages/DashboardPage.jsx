@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { getLibrary, updateLibraryEntry } from '../api/library';
-import { createPlaylist, setPlaylistSongs } from '../api/playlists';
+import { createPlaylist, listPlaylists, setPlaylistSongs } from '../api/playlists';
 import { getTransitions, createTransition as apiCreateTransition } from '../api/transitions';
 import { enrichSongs, getFirstWord } from '../utils/enrichment';
 import { shuffle, computeFadedIds } from '../utils/filters';
@@ -100,6 +101,7 @@ export default function DashboardPage() {
   const { user, logout } = useAuth();
   const { defaultSort } = useSettings();
   const ctx = usePlayState();
+  const navigate = useNavigate();
   const {
     nowPlaying, queue, playHistory, session,
     setNowPlaying, setQueue, setPlayHistory, setSession,
@@ -154,6 +156,11 @@ export default function DashboardPage() {
   const [notifMsg,     notify]          = useNotify();
   const { dlg, openDialog, closeDialog } = useDialog();
 
+  // Center panel tab
+  const [centerTab,      setCenterTab]      = useState('library');
+  const [playlists,      setPlaylists]      = useState([]);
+  const [playlistsLoading, setPlaylistsLoading] = useState(false);
+
   // ── Load library from API ─────────────────────────────────────────────────
 
   useEffect(() => {
@@ -204,6 +211,16 @@ export default function DashboardPage() {
     load();
     return () => { cancelled = true; };
   }, [loadTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Load playlists when playlists tab is opened ───────────────────────────
+
+  useEffect(() => {
+    if (centerTab !== 'playlists') return;
+    setPlaylistsLoading(true);
+    listPlaylists()
+      .then(data => { setPlaylists(data); setPlaylistsLoading(false); })
+      .catch(() => setPlaylistsLoading(false));
+  }, [centerTab]);
 
   // ── Enriching banner — push panels down ───────────────────────────────────
   useEffect(() => {
@@ -663,7 +680,44 @@ export default function DashboardPage() {
 
       {/* Main content area — left always offset by filter panel */}
       <main className="main-area">
-        <SongGrid
+        {/* Center panel tab strip */}
+        <div className="dash-tabs">
+          <button
+            className={`dash-tab${centerTab === 'library' ? ' active' : ''}`}
+            onClick={() => setCenterTab('library')}
+          >my library</button>
+          <button
+            className={`dash-tab${centerTab === 'playlists' ? ' active' : ''}`}
+            onClick={() => setCenterTab('playlists')}
+          >playlists</button>
+        </div>
+
+        {/* Playlists tab */}
+        {centerTab === 'playlists' && (
+          <div className="dash-playlists">
+            {playlistsLoading && <div className="empty-state">Loading…</div>}
+            {!playlistsLoading && playlists.length === 0 && (
+              <p className="empty-state">No playlists yet. Save a set to get started.</p>
+            )}
+            {!playlistsLoading && playlists.length > 0 && (
+              <div className="pl-grid">
+                {playlists.map(pl => (
+                  <div key={pl.id} className="pl-card" onClick={() => navigate(`/playlists/${pl.id}`)}>
+                    <div className="pl-card-type">{pl.playlist_type || 'set'}</div>
+                    <div className="pl-card-title">{pl.title}</div>
+                    <div className="pl-card-meta">
+                      <span>{pl.song_count ?? 0} song{pl.song_count !== 1 ? 's' : ''}</span>
+                      {pl.is_public && <span className="pl-card-pub">public</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Library tab */}
+        {centerTab === 'library' && <SongGrid
           songs={songs}
           nowPlaying={nowPlaying}
           selectedSong={selectedSong}
@@ -687,7 +741,7 @@ export default function DashboardPage() {
           onZoomChange={handleZoomChange}
           onSearchOpen={() => setSearchOpen(true)}
           onImportOpen={() => setImportOpen(true)}
-        />
+        />}
       </main>
 
       {/* Dialog */}

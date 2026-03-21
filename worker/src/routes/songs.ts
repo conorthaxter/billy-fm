@@ -76,12 +76,21 @@ export async function listSongs(request: AuthRequest, env: Env): Promise<Respons
 
   if (eraParam) {
     const eras = eraParam.split(',').map(e => e.trim()).filter(Boolean);
-    if (eras.length === 1) {
-      conditions.push(`s.era = ?`);
-      bindings.push(eras[0]);
-    } else if (eras.length > 1) {
-      conditions.push(`s.era IN (${eras.map(() => '?').join(',')})`);
-      bindings.push(...eras);
+    const includeNull = eras.includes('__null__');
+    const normalEras  = eras.filter(e => e !== '__null__');
+    if (normalEras.length === 0 && includeNull) {
+      conditions.push(`s.era IS NULL`);
+    } else if (normalEras.length > 0 && !includeNull) {
+      if (normalEras.length === 1) {
+        conditions.push(`s.era = ?`);
+        bindings.push(normalEras[0]);
+      } else {
+        conditions.push(`s.era IN (${normalEras.map(() => '?').join(',')})`);
+        bindings.push(...normalEras);
+      }
+    } else if (normalEras.length > 0 && includeNull) {
+      conditions.push(`(s.era IN (${normalEras.map(() => '?').join(',')}) OR s.era IS NULL)`);
+      bindings.push(...normalEras);
     }
   }
 

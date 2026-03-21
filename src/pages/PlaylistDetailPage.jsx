@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import AppHeader from '../components/AppHeader';
 import { getPlaylist, updatePlaylist, deletePlaylist, setPlaylistSongs } from '../api/playlists';
-import { getTransitions } from '../api/transitions';
+import { getTransitions, createTransition } from '../api/transitions';
 import { keyColor } from '../utils/keyColors';
 import { useSettings } from '../contexts/SettingsContext';
 import { usePlayState } from '../contexts/PlayStateContext';
@@ -50,7 +50,7 @@ function InlineTitle({ value, onSave }) {
 
 // ─── Song row ─────────────────────────────────────────────────────────────────
 
-function SongRow({ song, index, selected, onSelect, dragging, onDragStart, onDragOver, onDrop, onDragEnd, hasTransitionAfter }) {
+function SongRow({ song, index, selected, onSelect, checked, onCheck, dragging, onDragStart, onDragOver, onDrop, onDragEnd, hasTransitionAfter }) {
   const { palette } = useSettings();
   const [bg, fg] = song.key ? keyColor(song.key, palette) : ['#eee', '#000'];
 
@@ -65,6 +65,13 @@ function SongRow({ song, index, selected, onSelect, dragging, onDragStart, onDra
         onDragEnd={onDragEnd}
         onClick={onSelect}
       >
+        <input
+          type="checkbox"
+          className="pl-song-check"
+          checked={checked}
+          onChange={onCheck}
+          onClick={e => e.stopPropagation()}
+        />
         <span className="pl-song-pos">{index + 1}</span>
         <div className="pl-song-info">
           <span className="pl-song-title">{song.title}</span>
@@ -98,6 +105,7 @@ export default function PlaylistDetailPage() {
   const [loading,      setLoading]      = useState(true);
   const [error,        setError]        = useState('');
   const [selectedIdx,  setSelectedIdx]  = useState(null);
+  const [selectedIds,  setSelectedIds]  = useState(new Set());
   const [dragIdx,      setDragIdx]      = useState(null);
   const [dragOverIdx,  setDragOverIdx]  = useState(null);
   const [notif,        setNotif]        = useState('');
@@ -107,6 +115,38 @@ export default function PlaylistDetailPage() {
     setNotif(msg);
     clearTimeout(notifTimer.current);
     notifTimer.current = setTimeout(() => setNotif(''), 2600);
+  }
+
+  function toggleCheck(songId) {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(songId) ? next.delete(songId) : next.add(songId);
+      return next;
+    });
+  }
+
+  async function handleLinkTransitions() {
+    const ordered = songs.filter(s => selectedIds.has(s.song_id));
+    if (ordered.length < 2) return;
+    try {
+      for (let i = 0; i < ordered.length - 1; i++) {
+        await createTransition(ordered[i].song_id, { to_song_id: ordered[i + 1].song_id });
+      }
+      notify(`Linked ${ordered.length} songs as transitions`);
+      setSelectedIds(new Set());
+      // Refresh transitions display
+      const fromIds = songs.slice(0, -1).map(s => s.song_id);
+      const results = await Promise.all(
+        fromIds.map(sid => getTransitions(sid).then(ts => ({ sid, ts })).catch(() => ({ sid, ts: [] })))
+      );
+      const map = {};
+      for (const { sid, ts } of results) {
+        map[sid] = new Set(ts.map(t => t.to_song_id));
+      }
+      setTransitions(map);
+    } catch (err) {
+      notify(err.message || 'Failed to link transitions');
+    }
   }
 
   // Load playlist + songs
@@ -292,29 +332,41 @@ export default function PlaylistDetailPage() {
         )}
 
         {songs.length > 0 && (
-          <div className="pl-song-list">
-            {songs.map((song, i) => {
-              const nextSong = songs[i + 1];
-              const hasTransitionAfter = nextSong
-                ? (transitions[song.song_id]?.has(nextSong.song_id) ?? false)
-                : false;
-              return (
-                <SongRow
-                  key={song.song_id}
-                  song={song}
-                  index={i}
-                  selected={selectedIdx === i}
-                  onSelect={() => setSelectedIdx(selectedIdx === i ? null : i)}
-                  dragging={dragIdx === i || dragOverIdx === i}
-                  onDragStart={() => handleDragStart(i)}
-                  onDragOver={e => handleDragOver(e, i)}
-                  onDrop={() => handleDrop(i)}
-                  onDragEnd={handleDragEnd}
-                  hasTransitionAfter={hasTransitionAfter}
-                />
-              );
-            })}
-          </div>
+          <>
+            {selectedIds.size >= 2 && (
+              <button className="nb pl-link-btn" onClick={handleLinkTransitions}>
+                Link Transitions ({selectedIds.size})
+              </button>
+            )}
+            <div className="pl-song-list">
+              {songs.map((song, i) => {
+                const nextSong = songs[i + 1];
+                const hasTransitionAfter = nextSong
+                  ? (transitions[song.song_id]?.has(nextSong.song_id) ?? false)
+                  : false;
+                return (
+                  <SongRow
+                    key={song.song_id}
+                    song={song}
+                    index={i}
+                    selected={selectedIdx === i}
+                    onSelect={() => {
+                      ctx.playSong({ song_id: song.song_id, title: song.title, artist: song.artist, key: song.key, bpm: song.bpm });
+                      setSelectedIdx(selectedIdx === i ? null : i);
+                    }}
+                    checked={selectedIds.has(song.song_id)}
+                    onCheck={() => toggleCheck(song.song_id)}
+                    dragging={dragIdx === i || dragOverIdx === i}
+                    onDragStart={() => handleDragStart(i)}
+                    onDragOver={e => handleDragOver(e, i)}
+                    onDrop={() => handleDrop(i)}
+                    onDragEnd={handleDragEnd}
+                    hasTransitionAfter={hasTransitionAfter}
+                  />
+                );
+              })}
+            </div>
+          </>
         )}
       </div>
 

@@ -1,6 +1,8 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { keyColor } from '../utils/keyColors';
 import { useSettings } from '../contexts/SettingsContext';
+import { listSongs } from '../api/songs';
+import { addToLibrary } from '../api/library';
 
 // ─── Drag data helpers ─────────────────────────────────────────────────────────
 
@@ -361,6 +363,75 @@ function QueueSection({ queue, onPlay, onRemove, onClear, onReorder, onDropSong 
   );
 }
 
+// ─── Compact Songbook panel ───────────────────────────────────────────────────
+
+function SongbookPanel() {
+  const { palette } = useSettings();
+  const [search,   setSearch]   = useState('');
+  const [songs,    setSongs]    = useState([]);
+  const [loading,  setLoading]  = useState(false);
+  const [adding,   setAdding]   = useState(new Set());
+  const [added,    setAdded]    = useState(new Set());
+  const debounceRef = useRef(null);
+
+  useEffect(() => {
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setLoading(true);
+      const params = { limit: 30, sort: 'popular' };
+      if (search.trim()) params.search = search.trim();
+      listSongs(params)
+        .then(data => { setSongs(data.songs); setLoading(false); })
+        .catch(() => setLoading(false));
+    }, 300);
+  }, [search]);
+
+  async function handleAdd(song) {
+    setAdding(prev => new Set(prev).add(song.id));
+    try {
+      await addToLibrary(song.id);
+      setAdded(prev => new Set(prev).add(song.id));
+    } catch { /* 409 = already in library */ setAdded(prev => new Set(prev).add(song.id)); }
+    finally { setAdding(prev => { const n = new Set(prev); n.delete(song.id); return n; }); }
+  }
+
+  return (
+    <div className="rp-songbook">
+      <input
+        className="rp-songbook-search"
+        type="text"
+        placeholder="Search public songbook…"
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+      />
+      {loading && <div className="rp-songbook-empty">Loading…</div>}
+      {!loading && songs.length === 0 && <div className="rp-songbook-empty">No results</div>}
+      {!loading && songs.map(song => {
+        const [bg, fg] = keyColor(song.default_key, palette);
+        const isAdded = added.has(song.id);
+        return (
+          <div key={song.id} className="rp-sb-row">
+            <span className="rp-sb-dot" style={{ background: bg }} />
+            <div className="rp-sb-info">
+              <div className="rp-sb-title">{song.title}</div>
+              <div className="rp-sb-artist">{song.artist}</div>
+            </div>
+            {isAdded ? (
+              <span className="rp-sb-added">✓</span>
+            ) : (
+              <button
+                className="rp-sb-add"
+                disabled={adding.has(song.id)}
+                onClick={() => handleAdd(song)}
+              >+</button>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ─── Main RightPanel ───────────────────────────────────────────────────────────
 
 export default function RightPanel({
@@ -393,9 +464,19 @@ export default function RightPanel({
   onReorderHistory,
   onSelectNP,
 }) {
+  const [rpTab, setRpTab] = useState('session');
+
   return (
     <div className="right-panel">
-      <PPSection
+      {/* Tab strip */}
+      <div className="rp-tabs">
+        <button className={`rp-tab${rpTab === 'session' ? ' active' : ''}`} onClick={() => setRpTab('session')}>session</button>
+        <button className={`rp-tab${rpTab === 'songbook' ? ' active' : ''}`} onClick={() => setRpTab('songbook')}>songbook</button>
+      </div>
+
+      {rpTab === 'songbook' && <SongbookPanel />}
+
+      {rpTab === 'session' && <><PPSection
         history={playHistory}
         collapsed={ppCollapsed}
         onToggle={onTogglePP}
@@ -434,7 +515,7 @@ export default function RightPanel({
         suggestions={suggestions || []}
         onAddToQueue={onAddSuggestionToQueue}
         onDismiss={onDismissSuggestion}
-      />
+      /></>}
     </div>
   );
 }
