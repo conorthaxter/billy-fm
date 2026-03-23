@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { getLibrary, updateLibraryEntry } from '../api/library';
-import { createPlaylist, listPlaylists, setPlaylistSongs } from '../api/playlists';
+import { createPlaylist, listPlaylists, setPlaylistSongs, getPlaylist, updatePlaylist, deletePlaylist } from '../api/playlists';
 import { getTransitions, createTransition as apiCreateTransition } from '../api/transitions';
 import { enrichSongs, getFirstWord } from '../utils/enrichment';
 import { shuffle, computeFadedIds } from '../utils/filters';
@@ -101,7 +100,6 @@ export default function DashboardPage() {
   const { user, logout } = useAuth();
   const { defaultSort } = useSettings();
   const ctx = usePlayState();
-  const navigate = useNavigate();
   const {
     nowPlaying, queue, playHistory, session,
     setNowPlaying, setQueue, setPlayHistory, setSession,
@@ -117,7 +115,8 @@ export default function DashboardPage() {
   const [loadTrigger,  setLoadTrigger]  = useState(0);
 
   // Selection (local — clears on tab switch)
-  const [selectedSong, setSelectedSong] = useState(null);
+  const [selectedSong,  setSelectedSong]  = useState(null);
+  const [multiSelected, setMultiSelected] = useState([]);
 
   // Filter / sort
   const [filters,     setFilters]     = useState({ key:false, bpm:false, theme:false, era:false, artist:false, genre:false, unplayed:false, frequent:false });
@@ -156,10 +155,11 @@ export default function DashboardPage() {
   const [notifMsg,     notify]          = useNotify();
   const { dlg, openDialog, closeDialog } = useDialog();
 
-  // Center panel tab
-  const [centerTab,      setCenterTab]      = useState('library');
-  const [playlists,      setPlaylists]      = useState([]);
-  const [playlistsLoading, setPlaylistsLoading] = useState(false);
+  // Playlists (shown in left panel)
+  const [playlists,         setPlaylists]         = useState([]);
+  const [playlistsLoading,  setPlaylistsLoading]  = useState(false);
+  const [openPlaylist,      setOpenPlaylist]      = useState(null);
+  const [openPlaylistLoading, setOpenPlaylistLoading] = useState(false);
 
   // ── Load library from API ─────────────────────────────────────────────────
 
@@ -212,15 +212,14 @@ export default function DashboardPage() {
     return () => { cancelled = true; };
   }, [loadTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Load playlists when playlists tab is opened ───────────────────────────
+  // ── Load playlists on mount (shown in left panel) ─────────────────────────
 
   useEffect(() => {
-    if (centerTab !== 'playlists') return;
     setPlaylistsLoading(true);
     listPlaylists()
       .then(data => { setPlaylists(data); setPlaylistsLoading(false); })
       .catch(() => setPlaylistsLoading(false));
-  }, [centerTab]);
+  }, []);
 
   // ── Enriching banner — push panels down ───────────────────────────────────
   useEffect(() => {
@@ -367,6 +366,7 @@ export default function DashboardPage() {
   function clearSelectedSong() {
     setSelectedSong(null);
     setFilters(CLEAR_FILTERS);
+    setMultiSelected([]);
   }
 
   function clearAllFilters() {
@@ -374,12 +374,33 @@ export default function DashboardPage() {
     setKeyFilter(null);
   }
 
-  function selectSong(song) {
+  function selectSong(song, isMulti = false) {
     if (linkingMode) {
       handleLinkSong(song);
       return;
     }
+    if (isMulti) {
+      setMultiSelected(prev => {
+        const idx = prev.findIndex(s => s.song_id === song.song_id);
+        return idx >= 0 ? prev.filter(s => s.song_id !== song.song_id) : [...prev, song];
+      });
+      return;
+    }
+    setMultiSelected([]);
     setSelectedSong(song);
+  }
+
+  async function handleLinkMultiSelect() {
+    if (multiSelected.length < 2) return;
+    let linked = 0;
+    for (let i = 0; i < multiSelected.length - 1; i++) {
+      try {
+        await apiCreateTransition(multiSelected[i].song_id, { to_song_id: multiSelected[i + 1].song_id });
+        linked++;
+      } catch { /* silent */ }
+    }
+    notify(`Linked ${linked} transition${linked !== 1 ? 's' : ''}`);
+    setMultiSelected([]);
   }
 
   function playSong(song) {
@@ -516,6 +537,52 @@ export default function DashboardPage() {
       setQueue([]);
       notify('Set cleared');
     });
+  }
+
+  // ── Playlist panel handlers ───────────────────────────────────────────────
+
+  async function handleOpenPlaylist(id) {
+    setOpenPlaylistLoading(true);
+    setOpenPlaylist({ id, title: '', songs: [] }); // optimistic skeleton
+    try {
+      const data = await getPlaylist(id);
+      setOpenPlaylist(data);
+    } catch { setOpenPlaylist(null); }
+    setOpenPlaylistLoading(false);
+  }
+
+  function handleClosePlaylist() { setOpenPlaylist(null); }
+
+  async function handlePlaylistRename(id, title) {
+    try {
+      await updatePlaylist(id, { title });
+      setPlaylists(prev => prev.map(p => p.id === id ? { ...p, title } : p));
+      setOpenPlaylist(p => p ? { ...p, title } : p);
+    } catch { /* silent */ }
+  }
+
+  async function handlePlaylistDelete(id) {
+    if (!confirm('Delete this playlist?')) return;
+    try {
+      await deletePlaylist(id);
+      setPlaylists(prev => prev.filter(p => p.id !== id));
+      if (openPlaylist?.id === id) setOpenPlaylist(null);
+    } catch { /* silent */ }
+  }
+
+  async function handlePlaylistToggleFavorite(id, is_favorited) {
+    try {
+      await updatePlaylist(id, { is_favorited });
+      setPlaylists(prev => {
+        const updated = prev.map(p => p.id === id ? { ...p, is_favorited } : p);
+        return [...updated].sort((a, b) => (b.is_favorited ? 1 : 0) - (a.is_favorited ? 1 : 0));
+      });
+    } catch { /* silent */ }
+  }
+
+  function handlePlaylistPlayAll(songs) {
+    for (const s of songs) ctx.addToQueue(s);
+    notify(`${songs.length} songs added to queue`);
   }
 
   function closeSearch() {
@@ -676,48 +743,29 @@ export default function DashboardPage() {
         session={session}
         hasActiveFilters={Object.values(filters).some(Boolean) || !!keyFilter}
         onClearFilters={clearAllFilters}
+        playlists={playlists}
+        playlistsLoading={playlistsLoading}
+        openPlaylist={openPlaylist}
+        openPlaylistLoading={openPlaylistLoading}
+        onOpenPlaylist={handleOpenPlaylist}
+        onClosePlaylist={handleClosePlaylist}
+        onPlaylistRename={handlePlaylistRename}
+        onPlaylistDelete={handlePlaylistDelete}
+        onPlaylistToggleFavorite={handlePlaylistToggleFavorite}
+        onPlaylistPlayAll={handlePlaylistPlayAll}
+        onPlaylistSongClick={(song, isMulti) => {
+          const libSong = songs.find(s => s.song_id === song.song_id) || song;
+          if (isMulti) selectSong(libSong, true);
+          else playSong(libSong);
+        }}
+        multiSelected={multiSelected}
+        onLinkMultiSelect={handleLinkMultiSelect}
+        onClearMultiSelect={() => setMultiSelected([])}
       />
 
       {/* Main content area — left always offset by filter panel */}
       <main className="main-area">
-        {/* Center panel tab strip */}
-        <div className="dash-tabs">
-          <button
-            className={`dash-tab${centerTab === 'library' ? ' active' : ''}`}
-            onClick={() => setCenterTab('library')}
-          >my library</button>
-          <button
-            className={`dash-tab${centerTab === 'playlists' ? ' active' : ''}`}
-            onClick={() => setCenterTab('playlists')}
-          >playlists</button>
-        </div>
-
-        {/* Playlists tab */}
-        {centerTab === 'playlists' && (
-          <div className="dash-playlists">
-            {playlistsLoading && <div className="empty-state">Loading…</div>}
-            {!playlistsLoading && playlists.length === 0 && (
-              <p className="empty-state">No playlists yet. Save a set to get started.</p>
-            )}
-            {!playlistsLoading && playlists.length > 0 && (
-              <div className="pl-grid">
-                {playlists.map(pl => (
-                  <div key={pl.id} className="pl-card" onClick={() => navigate(`/playlists/${pl.id}`)}>
-                    <div className="pl-card-type">{pl.playlist_type || 'set'}</div>
-                    <div className="pl-card-title">{pl.title}</div>
-                    <div className="pl-card-meta">
-                      <span>{pl.song_count ?? 0} song{pl.song_count !== 1 ? 's' : ''}</span>
-                      {pl.is_public && <span className="pl-card-pub">public</span>}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Library tab */}
-        {centerTab === 'library' && <SongGrid
+        <SongGrid
           songs={songs}
           nowPlaying={nowPlaying}
           selectedSong={selectedSong}
@@ -729,6 +777,7 @@ export default function DashboardPage() {
           onReshuffle={handleReshuffle}
           onSelectSong={selectSong}
           onPlaySong={playSong}
+          multiSelected={new Set(multiSelected.map(s => s.song_id))}
           onAddToQueue={addToQueue}
           onDeselect={clearSelectedSong}
           loading={loading}
@@ -741,7 +790,7 @@ export default function DashboardPage() {
           onZoomChange={handleZoomChange}
           onSearchOpen={() => setSearchOpen(true)}
           onImportOpen={() => setImportOpen(true)}
-        />}
+        />
       </main>
 
       {/* Dialog */}

@@ -100,9 +100,6 @@ export default function AppHeader() {
             <NavLink to="/marketplace" className={({ isActive }) => `nav-tab-link${isActive ? ' active' : ''}`}>
               public songbook
             </NavLink>
-            <NavLink to="/playlists" className={({ isActive }) => `nav-tab-link${isActive ? ' active' : ''}`}>
-              playlists
-            </NavLink>
           </div>
         </div>
 

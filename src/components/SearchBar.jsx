@@ -7,10 +7,22 @@ export default function SearchBar({ isOpen, songs, filterPanelOpen, onSearch, on
   const barRef      = useRef(null);
   const sugRef      = useRef(null);
   const { palette } = useSettings();
-  const [activeIdx, setActiveIdx] = useState(-1);
+
+  // Keyboard index (arrow keys) vs hover index (mouse) — tracked separately
+  const [kbIdx,        setKbIdx]        = useState(-1);
+  const [hoverIdx,     setHoverIdx]     = useState(-1);
+  const [keyboardMode, setKeyboardMode] = useState(false);
+
+  // Computed: keyboard takes priority when in keyboard mode
+  const activeIdx = keyboardMode ? kbIdx : hoverIdx;
 
   useEffect(() => {
-    if (isOpen) { inputRef.current?.focus(); setActiveIdx(-1); }
+    if (isOpen) {
+      inputRef.current?.focus();
+      setKbIdx(-1);
+      setHoverIdx(-1);
+      setKeyboardMode(false);
+    }
   }, [isOpen]);
 
   // Click-outside closes search
@@ -25,8 +37,22 @@ export default function SearchBar({ isOpen, songs, filterPanelOpen, onSearch, on
     return () => document.removeEventListener('mousedown', onMouseDown);
   }, [isOpen, onClose]);
 
-  // Reset active index when query changes
-  useEffect(() => { setActiveIdx(-1); }, [searchQuery]);
+  // Any mouse movement over suggestions → exit keyboard mode
+  useEffect(() => {
+    if (!isOpen) return;
+    const el = sugRef.current;
+    if (!el) return;
+    function onMove() { setKeyboardMode(false); }
+    el.addEventListener('mousemove', onMove);
+    return () => el.removeEventListener('mousemove', onMove);
+  }, [isOpen, sugRef.current]); // eslint-disable-line
+
+  // Reset when query changes
+  useEffect(() => {
+    setKbIdx(-1);
+    setHoverIdx(-1);
+    setKeyboardMode(false);
+  }, [searchQuery]);
 
   const leftOffset = filterPanelOpen ? 180 : 0;
 
@@ -43,20 +69,24 @@ export default function SearchBar({ isOpen, songs, filterPanelOpen, onSearch, on
 
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setActiveIdx(i => Math.min(i + 1, suggestions.length - 1));
+      setKeyboardMode(true);
+      setKbIdx(i => Math.min(i + 1, suggestions.length - 1));
       return;
     }
     if (e.key === 'ArrowUp') {
       e.preventDefault();
-      setActiveIdx(i => Math.max(i - 1, -1));
+      setKeyboardMode(true);
+      setKbIdx(i => Math.max(i - 1, -1));
       return;
     }
 
     if (e.key === 'Enter') {
       e.preventDefault();
       e.stopPropagation(); // prevent global Enter→play handler from firing
-      const target = activeIdx >= 0 ? suggestions[activeIdx] : suggestions[0];
+      const idx = keyboardMode ? kbIdx : hoverIdx;
+      const target = idx >= 0 ? suggestions[idx] : suggestions[0];
       if (!target) return;
+      setKeyboardMode(false); // reset so accidental second Enter doesn't re-fire
       onSelectSong?.(target);
       onClose();
     }
@@ -87,7 +117,7 @@ export default function SearchBar({ isOpen, songs, filterPanelOpen, onSearch, on
               <div
                 key={s.song_id}
                 className={`si${idx === activeIdx ? ' si-active' : ''}`}
-                onMouseEnter={() => setActiveIdx(idx)}
+                onMouseEnter={() => setHoverIdx(idx)}
                 onClick={() => { onSelectSong(s); onClose(); }}
                 onDoubleClick={e => { e.preventDefault(); onPlaySong?.(s); onClose(); }}
               >

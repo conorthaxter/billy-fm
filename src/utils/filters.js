@@ -97,8 +97,6 @@ export function computeFadedIds(songs, selectedSong, filters, filterMode, search
 
   const s = selectedSong;
   const rel = RELATIVE_MAP[s?.key || ''] || null;
-  // Song-dependent filters require a selected song; if none, those filters are skipped
-  const songDepActive = s && (filters.key || filters.bpm || filters.theme || filters.era || filters.artist || filters.genre);
   // If only play-frequency filters are active and no song selected, we can still filter
   const faded = new Set();
   let matchCount = 0;
@@ -109,14 +107,14 @@ export function computeFadedIds(songs, selectedSong, filters, filterMode, search
     const checks = [];
     if (filters.key && s)      checks.push(song.key === s.key || (rel && song.key === rel));
     if (filters.bpm && s)      checks.push(s.bpm != null && song.bpm != null && Math.abs(song.bpm - s.bpm) <= 15);
-    if (filters.theme && s)    checks.push(s.tags && song.tags && s.tags.some(t => song.tags.includes(t)));
+    if (filters.theme && s)    checks.push(s.tags?.length > 0 && song.tags?.length > 0 && s.tags.some(t => song.tags.includes(t)));
     if (filters.era && s)      checks.push(s.era && song.era && s.era === song.era);
     if (filters.artist && s) {
       const selArtists = (s.artist || '').split(',').map(a => a.trim().toLowerCase()).filter(Boolean);
       const songArtists = (song.artist || '').split(',').map(a => a.trim().toLowerCase()).filter(Boolean);
       checks.push(selArtists.some(a => songArtists.includes(a)));
     }
-    if (filters.genre && s)    checks.push(s.genre && song.genre && s.genre.some(g => song.genre.includes(g)));
+    if (filters.genre && s)    checks.push(s.genre?.length > 0 && song.genre?.length > 0 && s.genre.some(g => song.genre.includes(g)));
     // These two work without a selected song
     if (filters.unplayed) {
       const ev = (playHistory || []).filter(e => e.songId === song.song_id);

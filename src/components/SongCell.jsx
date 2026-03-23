@@ -1,17 +1,18 @@
 import { keyColor } from '../utils/keyColors';
 import { useSettings } from '../contexts/SettingsContext';
 
-export default function SongCell({ song, isNowPlaying, isSelected, isFaded, isMatch, isCursor, onMouseEnter, onSelect, onDblClick, onAddToQueue }) {
+export default function SongCell({ song, isNowPlaying, isSelected, isFaded, isMatch, isCursor, isMultiSelected, onMouseEnter, onSelect, onDblClick, onAddToQueue }) {
   const { palette } = useSettings();
   const [bg, fg] = keyColor(song.key, palette);
 
   const classes = [
     'sc',
-    isNowPlaying ? 'now-playing-cell' : '',
-    isSelected   ? 'selected-cell'    : '',
-    isFaded      ? 'faded'            : '',
-    isMatch      ? 'is-match'         : '',
-    isCursor     ? 'cursor-cell'      : '',
+    isNowPlaying    ? 'now-playing-cell' : '',
+    isSelected      ? 'selected-cell'    : '',
+    isFaded         ? 'faded'            : '',
+    isMatch         ? 'is-match'         : '',
+    isCursor        ? 'cursor-cell'      : '',
+    isMultiSelected ? 'multi-cell'       : '',
   ].filter(Boolean).join(' ');
 
   const cursorStyle = isCursor
@@ -21,7 +22,7 @@ export default function SongCell({ song, isNowPlaying, isSelected, isFaded, isMa
   return (
     <div
       className={classes}
-      style={{ background: bg, color: fg, ...cursorStyle }}
+      style={{ background: bg, color: fg, position: 'relative', ...cursorStyle }}
       draggable
       onDragStart={e => {
         e.dataTransfer.setData('application/x-song', JSON.stringify(song));
@@ -31,6 +32,9 @@ export default function SongCell({ song, isNowPlaying, isSelected, isFaded, isMa
       onClick={onSelect}
       onDoubleClick={e => { e.preventDefault(); onDblClick(); }}
     >
+      {isMultiSelected && (
+        <span style={{ position: 'absolute', top: 3, right: 3, fontSize: 9, background: 'rgba(0,0,0,0.55)', color: '#fff', borderRadius: '50%', width: 14, height: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3, pointerEvents: 'none' }}>✓</span>
+      )}
       <div>
         <div className="sc-title">{song.title}</div>
         <div className="sc-artist">{song.artist}</div>

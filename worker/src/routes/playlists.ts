@@ -21,15 +21,22 @@ function randomSlug(): string {
     .slice(0, 8);
 }
 
+async function resolveUserId(env: Env, userId: string): Promise<string> {
+  if (userId !== 'service') return userId;
+  const firstUser = await env.DB.prepare(`SELECT id FROM users LIMIT 1`).first<{ id: string }>();
+  return firstUser?.id ?? userId;
+}
+
 async function assertOwner(
   env: Env,
   playlistId: string,
   userId: string,
 ): Promise<{ id: string } | Response> {
+  const resolvedId = await resolveUserId(env, userId);
   const row = await env.DB.prepare(
     `SELECT id FROM playlists WHERE id = ? AND user_id = ?`,
   )
-    .bind(playlistId, userId)
+    .bind(playlistId, resolvedId)
     .first<{ id: string }>();
 
   if (!row) return error(404, { error: 'Playlist not found' });
@@ -73,22 +80,34 @@ export async function createPlaylist(request: AuthRequest, env: Env): Promise<Re
   const id   = crypto.randomUUID();
   const slug = randomSlug();
 
-  await env.DB.prepare(
-    `INSERT INTO playlists (id, user_id, title, playlist_type, notes, is_public, client_name, event_date, share_slug)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-  )
-    .bind(
-      id,
-      request.user!.id,
-      body.title.trim(),
-      body.playlist_type ?? 'set',
-      body.notes ?? null,
-      body.is_public ? 1 : 0,
-      body.client_name ?? null,
-      body.event_date ?? null,
-      slug,
+  const ownerId = await resolveUserId(env, request.user!.id);
+  if (ownerId === 'service') return error(500, { error: 'No users found to assign playlist ownership' });
+
+  try {
+    await env.DB.prepare(
+      `INSERT INTO playlists (id, user_id, title, playlist_type, notes, is_public, client_name, event_date, share_slug)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
-    .run();
+      .bind(
+        id,
+        ownerId,
+        body.title.trim(),
+        body.playlist_type ?? 'set',
+        body.notes ?? null,
+        body.is_public ? 1 : 0,
+        body.client_name ?? null,
+        body.event_date ?? null,
+        slug,
+      )
+      .run();
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error('[createPlaylist] DB insert failed:', msg, {
+      user_id: ownerId,
+      body,
+    });
+    return error(500, { error: 'DB insert failed', detail: msg, user_id: ownerId });
+  }
 
   const created = await env.DB.prepare(`SELECT * FROM playlists WHERE id = ?`)
     .bind(id)

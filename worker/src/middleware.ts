@@ -42,6 +42,7 @@ export function parseCookies(header: string | null): Record<string, string> {
 function getAllowedOrigins(env: Env): string[] {
   return [
     env.FRONTEND_ORIGIN,
+    'https://billy-book.pages.dev',
     'http://localhost:5173',
     'http://localhost:4173',
   ].filter(Boolean);

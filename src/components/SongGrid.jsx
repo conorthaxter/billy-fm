@@ -20,6 +20,7 @@ export default function SongGrid({
   onPlaySong,
   onAddToQueue,
   onDeselect,
+  multiSelected = new Set(),
   loading,
   error,
   keyFilter = null,
@@ -44,31 +45,40 @@ export default function SongGrid({
   const [keyMode, setKeyMode] = useState('maj');
   const keyList = keyMode === 'maj' ? CHROMATIC_KEYS : CHROMATIC_MINOR_KEYS;
 
-  // Grid cursor state
-  const [cursorIdx, setCursorIdx] = useState(null);
-  const [cursorVisible, setCursorVisible] = useState(false);
-  const mouseTimerRef = useRef(null);
-  const cursorIdxRef = useRef(cursorIdx);
-  cursorIdxRef.current = cursorIdx;
+  // Keyboard cursor (arrow keys only) — shown as glowing outline
+  const [kbIdx,        setKbIdx]        = useState(null);
+  const [kbVisible,    setKbVisible]    = useState(false);
+  // Mouse hover cursor — used for Enter when not in keyboard mode
+  const [hoverIdx,     setHoverIdx]     = useState(null);
+  // Keyboard mode: true after arrow key press, false after any mouse movement
+  const [keyboardMode, setKeyboardMode] = useState(false);
+
   const displayRef = useRef(display);
   displayRef.current = display;
 
-  // Mouse activity → hide cursor (cursor only appears on keyboard nav)
+  // Mouse movement → exit keyboard mode, hide visual cursor
   useEffect(() => {
-    function onMouseMove() { setCursorVisible(false); }
+    function onMouseMove() {
+      setKbVisible(false);
+      setKeyboardMode(false);
+    }
     document.addEventListener('mousemove', onMouseMove);
     return () => document.removeEventListener('mousemove', onMouseMove);
   }, []);
 
-  // Notify parent of cursor song changes
+  // Notify parent of the "active" cursor song
+  // In keyboard mode: kbIdx controls; otherwise hoverIdx controls
   useEffect(() => {
-    const song = cursorIdx !== null ? display[cursorIdx] : null;
+    const idx = keyboardMode ? kbIdx : hoverIdx;
+    const song = idx !== null ? display[idx] : null;
     onCursorChange?.(song ?? null);
-  }, [cursorIdx]); // eslint-disable-line
+  }, [kbIdx, hoverIdx, keyboardMode]); // eslint-disable-line
 
-  // Reset cursor when display changes significantly
+  // Reset cursors when display changes significantly
   useEffect(() => {
-    setCursorIdx(null);
+    setKbIdx(null);
+    setHoverIdx(null);
+    setKeyboardMode(false);
   }, [songs.length, sortBy]); // eslint-disable-line
 
   // Get grid column count from DOM
@@ -86,7 +96,7 @@ export default function SongGrid({
     return cols || 1;
   }
 
-  // Arrow key navigation
+  // Arrow key navigation — enters keyboard mode
   useEffect(() => {
     function onKey(e) {
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) return;
@@ -94,8 +104,9 @@ export default function SongGrid({
       if (!len) return;
       if (!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)) return;
       e.preventDefault();
-      setCursorVisible(true);
-      setCursorIdx(prev => {
+      setKbVisible(true);
+      setKeyboardMode(true);
+      setKbIdx(prev => {
         const cur = prev ?? -1;
         if (e.key === 'ArrowRight') return Math.min(len - 1, cur + 1);
         if (e.key === 'ArrowLeft')  return Math.max(0, (cur === -1 ? len : cur) - 1);
@@ -109,13 +120,13 @@ export default function SongGrid({
     return () => document.removeEventListener('keydown', onKey);
   }, []); // eslint-disable-line
 
-  // Scroll cursor tile into view
+  // Scroll keyboard cursor tile into view
   useEffect(() => {
-    if (cursorIdx === null || !gridRef.current) return;
+    if (kbIdx === null || !gridRef.current) return;
     const tiles = gridRef.current.querySelectorAll('.sc');
-    const el = tiles[cursorIdx];
+    const el = tiles[kbIdx];
     if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-  }, [cursorIdx]);
+  }, [kbIdx]);
 
   // Animation trigger
   const filterKey = `${selectedSong?.song_id ?? ''}-${anyFiltersActive}`;
@@ -247,12 +258,14 @@ export default function SongGrid({
                 isSelected={selectedSong?.song_id === id}
                 isFaded={faded}
                 isMatch={isMatch}
-                isCursor={cursorIdx === i && cursorVisible}
-                onMouseEnter={() => setCursorIdx(i)}
-                onSelect={() => {
-                  setCursorIdx(i);
-                  if (selectedSong?.song_id === id) { onDeselect?.(); }
-                  else { onSelectSong(song); }
+                isCursor={kbIdx === i && kbVisible}
+                isMultiSelected={multiSelected.has(id)}
+                onMouseEnter={() => setHoverIdx(i)}
+                onSelect={e => {
+                  const isMulti = e.shiftKey || e.ctrlKey || e.metaKey;
+                  if (isMulti) { onSelectSong(song, true); }
+                  else if (selectedSong?.song_id === id) { onDeselect?.(); }
+                  else { onSelectSong(song, false); }
                 }}
                 onDblClick={() => onPlaySong(song)}
                 onAddToQueue={() => onAddToQueue(song)}
