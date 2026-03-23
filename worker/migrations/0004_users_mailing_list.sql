@@ -1,0 +1,2 @@
+ALTER TABLE users ADD COLUMN mailing_list_opt_in INTEGER DEFAULT 0;
+ALTER TABLE users ADD COLUMN opted_in_at TEXT DEFAULT NULL;

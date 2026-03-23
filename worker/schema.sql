@@ -6,6 +6,8 @@ CREATE TABLE IF NOT EXISTS users (
   google_id TEXT UNIQUE,
   avatar_url TEXT,
   is_performer BOOLEAN DEFAULT 0,
+  mailing_list_opt_in INTEGER DEFAULT 0,
+  opted_in_at TEXT DEFAULT NULL,
   created_at TEXT DEFAULT (datetime('now')),
   updated_at TEXT DEFAULT (datetime('now'))
 );
@@ -62,6 +64,15 @@ CREATE TABLE IF NOT EXISTS playlists (
   tip_message TEXT,
   tip_minimum REAL,
   is_favorited BOOLEAN DEFAULT 0,
+  -- Client set fields (Phase 3f)
+  password TEXT DEFAULT NULL,
+  off_list_requests INTEGER DEFAULT 0,
+  is_locked INTEGER DEFAULT 0,
+  locked_at TEXT DEFAULT NULL,
+  color_scheme TEXT DEFAULT 'standard',
+  source TEXT DEFAULT NULL,
+  source_gig_id TEXT DEFAULT NULL,
+  metadata TEXT DEFAULT '{}',
   created_at TEXT DEFAULT (datetime('now')),
   updated_at TEXT DEFAULT (datetime('now'))
 );
@@ -126,6 +137,35 @@ CREATE TABLE IF NOT EXISTS song_transitions (
   UNIQUE(user_id, from_song_id, to_song_id)
 );
 
+-- OFF-LIST REQUESTS (client set feature)
+CREATE TABLE IF NOT EXISTS off_list_requests (
+  id TEXT PRIMARY KEY,
+  playlist_id TEXT REFERENCES playlists(id) ON DELETE CASCADE,
+  request_text TEXT NOT NULL,
+  requester_note TEXT DEFAULT '',
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+-- SET SUBMISSIONS (client set feature)
+CREATE TABLE IF NOT EXISTS set_submissions (
+  id TEXT PRIMARY KEY,
+  playlist_id TEXT REFERENCES playlists(id) ON DELETE CASCADE,
+  snapshot_json TEXT NOT NULL,
+  submitted_at TEXT DEFAULT (datetime('now'))
+);
+
+-- NOTIFICATIONS
+CREATE TABLE IF NOT EXISTS notifications (
+  id TEXT PRIMARY KEY,
+  user_id TEXT REFERENCES users(id) ON DELETE CASCADE,
+  type TEXT NOT NULL,
+  title TEXT NOT NULL,
+  body TEXT DEFAULT '',
+  metadata TEXT DEFAULT '{}',
+  is_read INTEGER DEFAULT 0,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
 -- INDEXES
 CREATE INDEX IF NOT EXISTS idx_user_library_user ON user_library(user_id);
 CREATE INDEX IF NOT EXISTS idx_songs_title_artist ON songs(title, artist);
@@ -137,3 +177,7 @@ CREATE INDEX IF NOT EXISTS idx_audience_requests_playlist ON audience_requests(p
 CREATE INDEX IF NOT EXISTS idx_auth_sessions_user ON auth_sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_transitions_from ON song_transitions(user_id, from_song_id);
 CREATE INDEX IF NOT EXISTS idx_transitions_to   ON song_transitions(user_id, to_song_id);
+CREATE INDEX IF NOT EXISTS idx_off_list_playlist ON off_list_requests(playlist_id);
+CREATE INDEX IF NOT EXISTS idx_submissions_playlist ON set_submissions(playlist_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_unread ON notifications(user_id, is_read);

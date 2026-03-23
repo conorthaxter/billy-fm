@@ -73,6 +73,14 @@ export async function createPlaylist(request: AuthRequest, env: Env): Promise<Re
     is_public?: boolean;
     client_name?: string;
     event_date?: string;
+    // Client set fields (Phase 3f)
+    color_scheme?: string;
+    source?: string;
+    source_gig_id?: string;
+    metadata?: Record<string, unknown> | string;
+    password?: string;
+    off_list_requests?: number;
+    is_locked?: boolean;
   }>();
 
   if (!body.title?.trim()) return error(400, { error: 'title is required' });
@@ -83,10 +91,17 @@ export async function createPlaylist(request: AuthRequest, env: Env): Promise<Re
   const ownerId = await resolveUserId(env, request.user!.id);
   if (ownerId === 'service') return error(500, { error: 'No users found to assign playlist ownership' });
 
+  // Normalise metadata to a JSON string
+  const metadataStr = body.metadata
+    ? (typeof body.metadata === 'string' ? body.metadata : JSON.stringify(body.metadata))
+    : '{}';
+
   try {
     await env.DB.prepare(
-      `INSERT INTO playlists (id, user_id, title, playlist_type, notes, is_public, client_name, event_date, share_slug)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO playlists
+         (id, user_id, title, playlist_type, notes, is_public, client_name, event_date, share_slug,
+          color_scheme, source, source_gig_id, metadata, password, off_list_requests, is_locked)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
         id,
@@ -98,6 +113,13 @@ export async function createPlaylist(request: AuthRequest, env: Env): Promise<Re
         body.client_name ?? null,
         body.event_date ?? null,
         slug,
+        body.color_scheme ?? 'standard',
+        body.source ?? null,
+        body.source_gig_id ?? null,
+        metadataStr,
+        body.password ?? null,
+        body.off_list_requests ?? 0,
+        body.is_locked ? 1 : 0,
       )
       .run();
   } catch (e) {

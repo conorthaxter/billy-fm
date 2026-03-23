@@ -1,0 +1,8 @@
+ALTER TABLE playlists ADD COLUMN password TEXT DEFAULT NULL;
+ALTER TABLE playlists ADD COLUMN off_list_requests INTEGER DEFAULT 0;
+ALTER TABLE playlists ADD COLUMN is_locked INTEGER DEFAULT 0;
+ALTER TABLE playlists ADD COLUMN locked_at TEXT DEFAULT NULL;
+ALTER TABLE playlists ADD COLUMN color_scheme TEXT DEFAULT 'standard';
+ALTER TABLE playlists ADD COLUMN source TEXT DEFAULT NULL;
+ALTER TABLE playlists ADD COLUMN source_gig_id TEXT DEFAULT NULL;
+ALTER TABLE playlists ADD COLUMN metadata TEXT DEFAULT '{}';
