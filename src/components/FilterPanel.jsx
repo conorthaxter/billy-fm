@@ -222,17 +222,6 @@ export default function FilterPanel({
   hasActiveFilters,
   onClearFilters,
   onSelectSong,
-  playlists = [],
-  playlistsLoading = false,
-  openPlaylist = null,
-  openPlaylistLoading = false,
-  onOpenPlaylist,
-  onClosePlaylist,
-  onPlaylistRename,
-  onPlaylistDelete,
-  onPlaylistToggleFavorite,
-  onPlaylistPlayAll,
-  onPlaylistSongClick,
   multiSelected = [],
   onLinkMultiSelect,
   onClearMultiSelect,
@@ -306,19 +295,6 @@ export default function FilterPanel({
       await deleteTransition(id);
       setTransitions(prev => prev.filter(t => t.id !== id));
     } catch { /* silent */ }
-  }
-
-  // Playlist inline title editing
-  const [plTitleEditing, setPlTitleEditing] = useState(false);
-  const [plTitleDraft,   setPlTitleDraft]   = useState('');
-  useEffect(() => { setPlTitleEditing(false); }, [openPlaylist?.id]); // eslint-disable-line
-
-  function commitPlTitle() {
-    const trimmed = plTitleDraft.trim();
-    if (trimmed && openPlaylist && trimmed !== openPlaylist.title) {
-      onPlaylistRename?.(openPlaylist.id, trimmed);
-    }
-    setPlTitleEditing(false);
   }
 
   return (
@@ -562,133 +538,6 @@ export default function FilterPanel({
           </button>
         </div>
       )}
-
-      {/* ── Playlists ────────────────────────────────────────────── */}
-      <div className="fp-sec">
-        {openPlaylist ? (
-          /* Detail view */
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-              <button className="fp-btn" onClick={onClosePlaylist}>← playlists</button>
-              <button
-                className="fp-btn"
-                style={{ marginLeft: 'auto', color: '#c00' }}
-                onClick={() => onPlaylistDelete?.(openPlaylist.id)}
-              >delete</button>
-            </div>
-
-            {/* Inline editable title */}
-            {plTitleEditing ? (
-              <input
-                style={{ width: '100%', fontFamily: 'var(--font)', fontSize: 13, fontWeight: 700, border: '1px solid #000', padding: '2px 4px', background: '#fff', outline: 'none', marginBottom: 4 }}
-                value={plTitleDraft}
-                autoFocus
-                onChange={e => setPlTitleDraft(e.target.value)}
-                onBlur={commitPlTitle}
-                onKeyDown={e => { if (e.key === 'Enter') commitPlTitle(); if (e.key === 'Escape') setPlTitleEditing(false); }}
-              />
-            ) : (
-              <div
-                style={{ fontSize: 13, fontWeight: 700, lineHeight: 1.3, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4 }}
-                title="Click to rename"
-                onClick={() => { setPlTitleDraft(openPlaylist.title); setPlTitleEditing(true); }}
-              >
-                <span style={{ flex: 1 }}>{openPlaylist.title}</span>
-                <span style={{ fontSize: 10, color: '#aaa' }}>✎</span>
-              </div>
-            )}
-
-            {/* Meta */}
-            <div style={{ fontSize: 10, color: '#888', marginBottom: 6 }}>
-              {openPlaylist.playlist_type || 'set'} · {(openPlaylist.songs || []).length} song{(openPlaylist.songs || []).length !== 1 ? 's' : ''}
-            </div>
-
-            {/* Play all */}
-            {(openPlaylist.songs || []).length > 0 && (
-              <button
-                className="fp-btn primary"
-                style={{ width: '100%', marginBottom: 8 }}
-                onClick={() => onPlaylistPlayAll?.(openPlaylist.songs)}
-              >▶ play all</button>
-            )}
-
-            {/* Song list */}
-            {openPlaylistLoading && <div style={{ fontSize: 11, color: '#888' }}>Loading…</div>}
-            {!openPlaylistLoading && (openPlaylist.songs || []).length === 0 && (
-              <div className="fp-no-song">No songs in this playlist</div>
-            )}
-            {(openPlaylist.songs || []).map((song, i) => {
-              const [bg, fg] = song.key ? keyColor(song.key, palette) : ['#e0e0e0', '#000'];
-              return (
-                <div
-                  key={song.song_id}
-                  style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 0', borderBottom: '1px solid #f0f0f0', cursor: 'pointer' }}
-                  onClick={e => {
-                    const isMulti = e.shiftKey || e.ctrlKey || e.metaKey;
-                    onPlaylistSongClick?.({ song_id: song.song_id, title: song.title, artist: song.artist, key: song.key, bpm: song.bpm, chords_url: song.chords_url }, isMulti);
-                  }}
-                >
-                  <span style={{ fontSize: 9, color: '#aaa', width: 14, flexShrink: 0, textAlign: 'right' }}>{i + 1}</span>
-                  <div style={{ flex: 1, overflow: 'hidden' }}>
-                    <div style={{ fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{song.title}</div>
-                    <div style={{ fontSize: 9, color: '#888', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{song.artist}</div>
-                  </div>
-                  {song.key && (
-                    <span style={{ background: bg, color: fg, fontSize: 8, padding: '1px 4px', flexShrink: 0, fontWeight: 700 }}>{song.key}</span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          /* List view */
-          <>
-            <div className="fp-hd">Playlists</div>
-            {playlistsLoading && <div style={{ fontSize: 11, color: '#888' }}>Loading…</div>}
-            {!playlistsLoading && playlists.length === 0 && (
-              <div className="fp-no-song">No playlists yet. Save a set to get started.</div>
-            )}
-            {playlists.map(pl => {
-              const date = pl.updated_at
-                ? new Date(pl.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-                : '';
-              return (
-                <div
-                  key={pl.id}
-                  style={{ padding: '6px 4px', borderBottom: '1px solid #ececec', cursor: 'pointer' }}
-                  onClick={() => onOpenPlaylist?.(pl.id)}
-                >
-                  {/* Top: type badge + delete */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
-                    <span style={{ fontSize: 8, background: '#000', color: '#fff', padding: '1px 4px', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                      {pl.playlist_type || 'set'}
-                    </span>
-                    <button
-                      className="fp-tr-rm"
-                      title="Delete"
-                      onClick={e => { e.stopPropagation(); onPlaylistDelete?.(pl.id); }}
-                    >✕</button>
-                  </div>
-                  {/* Title */}
-                  <div style={{ fontSize: 11, fontWeight: 700, lineHeight: 1.3, marginBottom: 4 }}>{pl.title}</div>
-                  {/* Bottom: star (left) + meta (right) */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <button
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 14, color: pl.is_favorited ? '#f0b429' : '#ccc', lineHeight: 1 }}
-                      title={pl.is_favorited ? 'Unfavorite' : 'Favorite'}
-                      onClick={e => { e.stopPropagation(); onPlaylistToggleFavorite?.(pl.id, !pl.is_favorited); }}
-                    >★</button>
-                    <span style={{ fontSize: 9, color: '#888' }}>
-                      {pl.song_count ?? 0} song{pl.song_count !== 1 ? 's' : ''}
-                      {date ? ` · ${date}` : ''}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </>
-        )}
-      </div>
 
       {/* ── Sticky bottom footer ──────────────────────────────────── */}
       <div className="fp-footer">

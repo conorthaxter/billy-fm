@@ -8,12 +8,13 @@ import { shuffle, computeFadedIds } from '../utils/filters';
 import { RELATIVE_MAP, ENHARMONIC_MAP } from '../utils/keyColors';
 import { usePlayState } from '../contexts/PlayStateContext';
 
-import AppHeader    from '../components/AppHeader';
+import AppHeader      from '../components/AppHeader';
 import { useSettings } from '../contexts/SettingsContext';
-import SongGrid     from '../components/SongGrid';
-import FilterPanel  from '../components/FilterPanel';
-import SearchBar    from '../components/SearchBar';
-import ImportDialog from '../components/ImportDialog';
+import SongGrid        from '../components/SongGrid';
+import FilterPanel     from '../components/FilterPanel';
+import PlaylistsPanel  from '../components/PlaylistsPanel';
+import SearchBar       from '../components/SearchBar';
+import ImportDialog    from '../components/ImportDialog';
 
 function sessionDateTitle() {
   return new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
@@ -146,6 +147,7 @@ export default function DashboardPage() {
   }
 
   // UI
+  const [centerTab,       setCenterTab]       = useState('library');
   const [ppCollapsed,     setPpCollapsed]     = useState(false);
   const [importOpen,      setImportOpen]      = useState(false);
   const [newSetNameOpen,  setNewSetNameOpen]  = useState(false);
@@ -743,54 +745,72 @@ export default function DashboardPage() {
         session={session}
         hasActiveFilters={Object.values(filters).some(Boolean) || !!keyFilter}
         onClearFilters={clearAllFilters}
-        playlists={playlists}
-        playlistsLoading={playlistsLoading}
-        openPlaylist={openPlaylist}
-        openPlaylistLoading={openPlaylistLoading}
-        onOpenPlaylist={handleOpenPlaylist}
-        onClosePlaylist={handleClosePlaylist}
-        onPlaylistRename={handlePlaylistRename}
-        onPlaylistDelete={handlePlaylistDelete}
-        onPlaylistToggleFavorite={handlePlaylistToggleFavorite}
-        onPlaylistPlayAll={handlePlaylistPlayAll}
-        onPlaylistSongClick={(song, isMulti) => {
-          const libSong = songs.find(s => s.song_id === song.song_id) || song;
-          if (isMulti) selectSong(libSong, true);
-          else playSong(libSong);
-        }}
         multiSelected={multiSelected}
         onLinkMultiSelect={handleLinkMultiSelect}
         onClearMultiSelect={() => setMultiSelected([])}
       />
 
-      {/* Main content area — left always offset by filter panel */}
+      {/* Main content area */}
       <main className="main-area">
-        <SongGrid
-          songs={songs}
-          nowPlaying={nowPlaying}
-          selectedSong={selectedSong}
-          fadedIds={keyFilteredResult}
-          sortBy={sortBy}
-          shuffleOrder={shuffleOrder}
-          playHistory={playHistory}
-          onSortChange={handleSortChange}
-          onReshuffle={handleReshuffle}
-          onSelectSong={selectSong}
-          onPlaySong={playSong}
-          multiSelected={new Set(multiSelected.map(s => s.song_id))}
-          onAddToQueue={addToQueue}
-          onDeselect={clearSelectedSong}
-          loading={loading}
-          error={loadError}
-          keyFilter={keyFilter}
-          onKeyFilterToggle={k => setKeyFilter(prev => prev === k ? null : k)}
-          onKeyFilterClear={() => setKeyFilter(null)}
-          onCursorChange={setCursorSong}
-          tileZoom={tileZoom}
-          onZoomChange={handleZoomChange}
-          onSearchOpen={() => setSearchOpen(true)}
-          onImportOpen={() => setImportOpen(true)}
-        />
+        {/* Center tab strip */}
+        <div className="dash-tabs">
+          <button
+            className={`dash-tab${centerTab === 'library' ? ' active' : ''}`}
+            onClick={() => setCenterTab('library')}
+          >Library</button>
+          <button
+            className={`dash-tab${centerTab === 'playlists' ? ' active' : ''}`}
+            onClick={() => setCenterTab('playlists')}
+          >Playlists</button>
+        </div>
+
+        {centerTab === 'library' && (
+          <SongGrid
+            songs={songs}
+            nowPlaying={nowPlaying}
+            selectedSong={selectedSong}
+            fadedIds={keyFilteredResult}
+            sortBy={sortBy}
+            shuffleOrder={shuffleOrder}
+            playHistory={playHistory}
+            onSortChange={handleSortChange}
+            onReshuffle={handleReshuffle}
+            onSelectSong={selectSong}
+            onPlaySong={playSong}
+            multiSelected={new Set(multiSelected.map(s => s.song_id))}
+            onAddToQueue={addToQueue}
+            onDeselect={clearSelectedSong}
+            loading={loading}
+            error={loadError}
+            keyFilter={keyFilter}
+            onKeyFilterToggle={k => setKeyFilter(prev => prev === k ? null : k)}
+            onKeyFilterClear={() => setKeyFilter(null)}
+            onCursorChange={setCursorSong}
+            tileZoom={tileZoom}
+            onZoomChange={handleZoomChange}
+            onSearchOpen={() => setSearchOpen(true)}
+            onImportOpen={() => setImportOpen(true)}
+          />
+        )}
+
+        {centerTab === 'playlists' && (
+          <PlaylistsPanel
+            playlists={playlists}
+            loading={playlistsLoading}
+            openPlaylist={openPlaylist}
+            openPlaylistLoading={openPlaylistLoading}
+            onOpenPlaylist={handleOpenPlaylist}
+            onClosePlaylist={handleClosePlaylist}
+            onPlaylistRename={handlePlaylistRename}
+            onPlaylistDelete={handlePlaylistDelete}
+            onPlaylistToggleFavorite={handlePlaylistToggleFavorite}
+            onPlaylistPlayAll={handlePlaylistPlayAll}
+            onSongClick={song => {
+              const libSong = songs.find(s => s.song_id === song.song_id) || song;
+              playSong(libSong);
+            }}
+          />
+        )}
       </main>
 
       {/* Dialog */}
