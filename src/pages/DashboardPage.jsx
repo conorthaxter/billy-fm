@@ -778,6 +778,7 @@ export default function DashboardPage() {
             onSelectSong={selectSong}
             onPlaySong={playSong}
             multiSelected={new Set(multiSelected.map(s => s.song_id))}
+            onClearMultiSelect={() => setMultiSelected([])}
             onAddToQueue={addToQueue}
             onDeselect={clearSelectedSong}
             loading={loading}
@@ -805,10 +806,15 @@ export default function DashboardPage() {
             onPlaylistDelete={handlePlaylistDelete}
             onPlaylistToggleFavorite={handlePlaylistToggleFavorite}
             onPlaylistPlayAll={handlePlaylistPlayAll}
-            onSongClick={song => {
+            onSongClick={(song, isMulti) => {
+              const libSong = songs.find(s => s.song_id === song.song_id) || song;
+              selectSong(libSong, isMulti);
+            }}
+            onSongDblClick={song => {
               const libSong = songs.find(s => s.song_id === song.song_id) || song;
               playSong(libSong);
             }}
+            multiSelected={new Set(multiSelected.map(s => s.song_id))}
           />
         )}
       </main>

@@ -1,7 +1,7 @@
 import { keyColor } from '../utils/keyColors';
 import { useSettings } from '../contexts/SettingsContext';
 
-export default function SongCell({ song, isNowPlaying, isSelected, isFaded, isMatch, isCursor, isMultiSelected, onMouseEnter, onSelect, onDblClick, onAddToQueue }) {
+export default function SongCell({ song, isNowPlaying, isSelected, isFaded, isMatch, isCursor, isMultiSelected, onMouseEnter, onSelect, onDblClick, onAddToQueue, onDragStart }) {
   const { palette } = useSettings();
   const [bg, fg] = keyColor(song.key, palette);
 
@@ -24,10 +24,7 @@ export default function SongCell({ song, isNowPlaying, isSelected, isFaded, isMa
       className={classes}
       style={{ background: bg, color: fg, position: 'relative', ...cursorStyle }}
       draggable
-      onDragStart={e => {
-        e.dataTransfer.setData('application/x-song', JSON.stringify(song));
-        e.dataTransfer.effectAllowed = 'copy';
-      }}
+      onDragStart={onDragStart}
       onMouseEnter={onMouseEnter}
       onClick={onSelect}
       onDoubleClick={e => { e.preventDefault(); onDblClick(); }}

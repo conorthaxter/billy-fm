@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { keyColor } from '../utils/keyColors';
 import { useSettings } from '../contexts/SettingsContext';
 
@@ -58,6 +58,8 @@ function PlaylistDetail({
   onToggleFavorite,
   onPlayAll,
   onSongClick,
+  onSongDblClick,
+  multiSelected = new Set(),
 }) {
   const { palette } = useSettings();
   const [titleEditing, setTitleEditing] = useState(false);
@@ -141,19 +143,25 @@ function PlaylistDetail({
         <div style={{ borderTop: '1px solid #e8e8e8' }}>
           {songs.map((song, i) => {
             const [bg, fg] = song.key ? keyColor(song.key, palette) : ['#e0e0e0', '#000'];
+            const isMultiSel = multiSelected.has(song.song_id);
+            const s = { song_id: song.song_id, title: song.title, artist: song.artist, key: song.key, bpm: song.bpm, chords_url: song.chords_url };
             return (
               <div
                 key={song.song_id}
-                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 4px', borderBottom: '1px solid #f0f0f0', cursor: 'pointer' }}
-                onClick={() => onSongClick?.({ song_id: song.song_id, title: song.title, artist: song.artist, key: song.key, bpm: song.bpm, chords_url: song.chords_url })}
-                onMouseEnter={e => e.currentTarget.style.background = '#fafafa'}
-                onMouseLeave={e => e.currentTarget.style.background = ''}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 4px', borderBottom: '1px solid #f0f0f0', cursor: 'pointer', background: isMultiSel ? '#f0f4ff' : '', position: 'relative' }}
+                onClick={e => onSongClick?.(s, e.shiftKey || e.ctrlKey || e.metaKey)}
+                onDoubleClick={e => { e.preventDefault(); onSongDblClick?.(s); }}
+                onMouseEnter={e => { if (!isMultiSel) e.currentTarget.style.background = '#fafafa'; }}
+                onMouseLeave={e => { if (!isMultiSel) e.currentTarget.style.background = ''; }}
               >
                 <span style={{ fontSize: 10, color: '#bbb', width: 20, textAlign: 'right', flexShrink: 0 }}>{i + 1}</span>
                 <div style={{ flex: 1, overflow: 'hidden' }}>
                   <div style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{song.title}</div>
                   <div style={{ fontSize: 11, color: '#888', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{song.artist}</div>
                 </div>
+                {isMultiSel && (
+                  <span style={{ fontSize: 9, background: 'rgba(0,0,0,0.5)', color: '#fff', borderRadius: '50%', width: 14, height: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>✓</span>
+                )}
                 {song.key && (
                   <span style={{ background: bg, color: fg, fontSize: 9, padding: '2px 6px', flexShrink: 0, fontWeight: 700 }}>{song.key}</span>
                 )}
@@ -181,6 +189,8 @@ export default function PlaylistsPanel({
   onPlaylistToggleFavorite,
   onPlaylistPlayAll,
   onSongClick,
+  onSongDblClick,
+  multiSelected = new Set(),
 }) {
   return (
     <div className="dash-playlists">
@@ -194,6 +204,8 @@ export default function PlaylistsPanel({
           onToggleFavorite={onPlaylistToggleFavorite}
           onPlayAll={onPlaylistPlayAll}
           onSongClick={onSongClick}
+          onSongDblClick={onSongDblClick}
+          multiSelected={multiSelected}
         />
       ) : (
         <>

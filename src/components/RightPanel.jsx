@@ -314,7 +314,12 @@ function QueueSection({ queue, onPlay, onRemove, onClear, onReorder, onDropSong 
       dragIdx.current = null;
       return;
     }
-    // External drop from grid, NP, or PP
+    // Multi-song drop from grid (Shift/Ctrl/Cmd selection)
+    const songsData = e.dataTransfer.getData('application/x-songs');
+    if (songsData) {
+      try { JSON.parse(songsData).forEach(s => onDropSong?.(s, toIdx)); return; } catch { /* ignore */ }
+    }
+    // Single song drop from grid, NP, or PP
     if (songData) {
       try { onDropSong?.(JSON.parse(songData), toIdx); } catch { /* ignore */ }
     }

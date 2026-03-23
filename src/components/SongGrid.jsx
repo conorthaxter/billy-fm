@@ -21,6 +21,7 @@ export default function SongGrid({
   onAddToQueue,
   onDeselect,
   multiSelected = new Set(),
+  onClearMultiSelect,
   loading,
   error,
   keyFilter = null,
@@ -269,6 +270,18 @@ export default function SongGrid({
                 }}
                 onDblClick={() => onPlaySong(song)}
                 onAddToQueue={() => onAddToQueue(song)}
+                onDragStart={e => {
+                  if (multiSelected.has(id)) {
+                    const all = songs.filter(s => multiSelected.has(s.song_id));
+                    if (all.length > 1) {
+                      e.dataTransfer.setData('application/x-songs', JSON.stringify(all));
+                    }
+                  } else {
+                    onClearMultiSelect?.();
+                  }
+                  e.dataTransfer.setData('application/x-song', JSON.stringify(song));
+                  e.dataTransfer.effectAllowed = 'copy';
+                }}
               />
             );
           })}
