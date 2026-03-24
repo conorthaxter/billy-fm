@@ -17,12 +17,12 @@ async function getPublicLibrary(
   searchQuery: string,
   tagsFilter: string[],
 ): Promise<Response> {
-  // Verify user exists
+  // Verify user exists + get display name for the page header
   const user = await env.DB.prepare(
-    `SELECT id FROM users WHERE id = ?`,
+    `SELECT id, display_name FROM users WHERE id = ?`,
   )
     .bind(userId)
-    .first<{ id: string }>();
+    .first<{ id: string; display_name: string }>();
 
   if (!user) return error(404, { error: 'User not found' });
 
@@ -58,7 +58,7 @@ async function getPublicLibrary(
     );
   }
 
-  return json(results);
+  return json({ artist: { id: user.id, display_name: user.display_name }, songs: results });
 }
 
 // ---------------------------------------------------------------------------

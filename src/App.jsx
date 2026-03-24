@@ -10,7 +10,7 @@ import DashboardPage        from './pages/DashboardPage';
 import MarketplacePage      from './pages/MarketplacePage';
 import PlaylistsPage        from './pages/PlaylistsPage';
 import PlaylistDetailPage   from './pages/PlaylistDetailPage';
-import PublicRepertoirePage from './pages/PublicRepertoirePage';
+import SongbookPage         from './pages/SongbookPage';
 import ClientSetPage        from './pages/ClientSetPage';
 import RequestQueuePage     from './pages/RequestQueuePage';
 import RightPanel           from './components/RightPanel';
@@ -80,6 +80,7 @@ function GlobalRightPanel() {
   const hide = !user || ['/login', '/'].some(p => location.pathname === p) ||
     location.pathname.startsWith('/r/') ||
     location.pathname.startsWith('/set/') ||
+    location.pathname.startsWith('/songbook/') ||
     location.pathname.startsWith('/wedding/') ||
     location.pathname.startsWith('/request/');
 
@@ -87,7 +88,7 @@ function GlobalRightPanel() {
 
   const {
     nowPlaying, queue, playHistory, session, dashExtras,
-    playSong, clearNP, addToQueue, removeFromQueue, reorderQueue,
+    playSong, clearNP, removeFromQueue, reorderQueue,
     dropSongIntoQueue, clearQueue, clearHistory, removeFromHistory,
     reorderHistory, startNewSession, handleDropToNP, handleDropToPP, handleDragFromNP,
   } = ctx;
@@ -184,7 +185,7 @@ export default function App() {
               <Route path="/marketplace" element={<RequireAuth><MarketplacePage /></RequireAuth>} />
               <Route path="/playlists" element={<RequireAuth><PlaylistsPage /></RequireAuth>} />
               <Route path="/playlists/:id" element={<RequireAuth><PlaylistDetailPage /></RequireAuth>} />
-              <Route path="/r/:slug"       element={<PublicRepertoirePage />} />
+              <Route path="/songbook/:userId" element={<SongbookPage />} />
               <Route path="/set/:slug"     element={<ClientSetPage />} />
               <Route path="/request/:slug" element={<RequestQueuePage />} />
             </Routes>

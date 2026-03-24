@@ -326,7 +326,7 @@ function SubmitModal({ items, requests, busy, onConfirm, onCancel }) {
           Your songs:
         </div>
         <ol style={{ margin: '0 0 14px 16px', padding: 0 }}>
-          {songs.map((item, i) => (
+          {songs.map((item) => (
             <li key={item.id} style={{ fontSize: 12, color: 'var(--cs-text)', marginBottom: 4 }}>
               {item.song.title} — {item.song.artist}
               {item.song.notes && <span style={{ color: 'var(--cs-muted)' }}> · {item.song.notes}</span>}
@@ -411,8 +411,8 @@ export default function ClientSetPage() {
 
       if (data.artist_id) {
         fetch(`${API_BASE}/api/songbook/${data.artist_id}`)
-          .then(r => r.ok ? r.json() : [])
-          .then(bank => setSongBank(Array.isArray(bank) ? bank : []))
+          .then(r => r.ok ? r.json() : { songs: [] })
+          .then(body => setSongBank(Array.isArray(body.songs) ? body.songs : []))
           .catch(() => {});
       }
     } catch (err) {
