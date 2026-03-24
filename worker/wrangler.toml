@@ -19,6 +19,9 @@ GOOGLE_CLIENT_ID = "404273759146-64g116fa86s8lm82oq3u8depdro22pds.apps.googleuse
 ENABLE_CLIENT_SETS = "false"
 ARTIST_EMAIL = "conorthaxter@gmail.com"
 
+[triggers]
+crons = ["0 16 * * 1"]
+
 # ---------------------------------------------------------------------------
 # Secrets (do NOT put real values here — use `wrangler secret put` instead)
 # wrangler secret put GOOGLE_CLIENT_SECRET

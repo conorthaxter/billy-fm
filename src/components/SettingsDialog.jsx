@@ -1,3 +1,5 @@
+import { useContext, useState } from 'react';
+import { AuthContext } from '../App';
 import { useSettings } from '../contexts/SettingsContext';
 import { keyColor, MAJOR_KEYS_PREVIEW } from '../utils/keyColors';
 
@@ -40,11 +42,56 @@ function PaletteSquares({ paletteId }) {
 
 export default function SettingsDialog({ onClose }) {
   const { palette, setPalette, bg, setBg, defaultSort, setDefaultSort, defaultPublic, setDefaultPublic } = useSettings();
+  const { user, updateUser } = useContext(AuthContext);
+
+  const [displayName, setDisplayName] = useState(user?.display_name ?? '');
+  const [nameSaving, setNameSaving] = useState(false);
+  const [nameError, setNameError] = useState('');
+  const [nameSaved, setNameSaved] = useState(false);
+
+  async function handleSaveName() {
+    const trimmed = displayName.trim();
+    if (!trimmed || trimmed === user?.display_name) return;
+    setNameSaving(true);
+    setNameError('');
+    try {
+      await updateUser({ display_name: trimmed });
+      setNameSaved(true);
+      setTimeout(() => setNameSaved(false), 2000);
+    } catch (err) {
+      setNameError(err.message ?? 'Failed to save');
+    } finally {
+      setNameSaving(false);
+    }
+  }
 
   return (
     <div className="dlg-overlay on">
       <div className="dlg" style={{ maxWidth: 420, width: '100%' }}>
         <div className="dlg-title">Settings</div>
+
+        {/* Display name */}
+        <div className="sett-sec">
+          <div className="sett-sec-hd">Display Name</div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              type="text"
+              value={displayName}
+              onChange={e => setDisplayName(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleSaveName()}
+              className="sett-select"
+              style={{ flex: 1 }}
+              placeholder="Your name"
+            />
+            <button
+              onClick={handleSaveName}
+              disabled={nameSaving || !displayName.trim() || displayName.trim() === user?.display_name}
+            >
+              {nameSaving ? '…' : nameSaved ? 'Saved' : 'Save'}
+            </button>
+          </div>
+          {nameError && <div style={{ fontSize: 11, color: '#c53030', marginTop: 4 }}>{nameError}</div>}
+        </div>
 
         {/* Song color scheme */}
         <div className="sett-sec">

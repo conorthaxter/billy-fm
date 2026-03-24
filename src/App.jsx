@@ -3,7 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-route
 import { SettingsProvider } from './contexts/SettingsContext';
 import { PlayStateProvider, usePlayState } from './contexts/PlayStateContext';
 
-import { getMe, logout as apiLogout, redirectToGoogle } from './api/auth';
+import { getMe, logout as apiLogout, redirectToGoogle, patchMe } from './api/auth';
 
 import LoginPage            from './pages/LoginPage';
 import DashboardPage        from './pages/DashboardPage';
@@ -15,6 +15,7 @@ import ClientSetPage        from './pages/ClientSetPage';
 import RequestQueuePage     from './pages/RequestQueuePage';
 import RightPanel           from './components/RightPanel';
 import SplashScreen         from './components/SplashScreen';
+import MailingListPrompt    from './components/MailingListPrompt';
 
 import './styles/global.css';
 
@@ -42,8 +43,14 @@ function AuthProvider({ children }) {
     setUser(null);
   }, []);
 
+  const updateUser = useCallback(async (fields) => {
+    const updated = await patchMe(fields);
+    setUser(updated);
+    return updated;
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, login, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );
@@ -178,6 +185,7 @@ export default function App() {
         <AuthProvider>
           <PlayStateProvider>
             {showSplash && <SplashScreen onDone={() => setShowSplash(false)} />}
+            <MailingListPrompt />
             <Routes>
               <Route path="/" element={<RootRedirect />} />
               <Route path="/login" element={<LoginPage />} />
