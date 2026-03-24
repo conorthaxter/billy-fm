@@ -8,28 +8,63 @@ const API_BASE = import.meta.env.VITE_API_URL ?? '';
 function SongRow({ song }) {
   return (
     <div style={{
-      display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
-      padding: '10px 20px', borderBottom: '1px solid #efefef',
+      display: 'flex',
+      alignItems: 'center',
+      padding: '0 20px',
+      height: 48,
+      borderBottom: '1px solid #1e1e1e',
+      gap: 12,
+      minWidth: 0,
     }}>
+      {/* Title + artist */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 14, fontWeight: 600, color: '#111', lineHeight: 1.3 }}>
+        <div style={{
+          fontSize: 13,
+          fontWeight: 600,
+          color: '#e8e8e8',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          lineHeight: 1.3,
+        }}>
           {song.title}
         </div>
-        <div style={{ fontSize: 12, color: '#777', marginTop: 2 }}>
+        <div style={{
+          fontSize: 11,
+          color: '#555',
+          marginTop: 1,
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+        }}>
           {song.artist}
         </div>
-        {song.tags?.length > 0 && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 6 }}>
-            {song.tags.map(t => (
-              <span key={t} style={{
-                fontSize: 9, padding: '2px 6px', textTransform: 'uppercase',
-                letterSpacing: 0.4, background: '#f3f3f3', color: '#888',
-                border: '1px solid #e5e5e5',
-              }}>{t}</span>
-            ))}
-          </div>
-        )}
       </div>
+
+      {/* Tags */}
+      {song.tags?.length > 0 && (
+        <div style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: 4,
+          justifyContent: 'flex-end',
+          flexShrink: 0,
+          maxWidth: '45%',
+        }}>
+          {song.tags.map(t => (
+            <span key={t} style={{
+              fontSize: 8,
+              padding: '2px 5px',
+              textTransform: 'uppercase',
+              letterSpacing: 0.5,
+              border: '1px solid #2a2a2a',
+              color: '#444',
+              lineHeight: 1.4,
+              whiteSpace: 'nowrap',
+            }}>{t}</span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -46,7 +81,6 @@ export default function SongbookPage() {
   const [error,    setError]    = useState('');
   const [search,   setSearch]   = useState('');
 
-  // Pre-fill tag filter from ?tags= URL param
   const [tagFilter, setTagFilter] = useState(() => searchParams.get('tags') ?? '');
 
   useEffect(() => {
@@ -86,36 +120,48 @@ export default function SongbookPage() {
     return list;
   }, [songs, search, tagFilter]);
 
-  // ── Render ──────────────────────────────────────────────────────────────────
-
   return (
-    <div style={{ minHeight: '100dvh', background: '#fff', fontFamily: 'monospace', color: '#111' }}>
+    <div style={{
+      minHeight: '100dvh',
+      background: '#0a0a0a',
+      fontFamily: 'monospace',
+      color: '#e8e8e8',
+    }}>
 
       {/* Header */}
       <header style={{
-        borderBottom: '2px solid #000',
-        padding: '16px 20px',
-        display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12,
-        flexWrap: 'wrap',
+        borderBottom: '1px solid #1e1e1e',
+        padding: '20px 20px 16px',
       }}>
-        <div>
-          <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 3, textTransform: 'uppercase', color: '#999', marginBottom: 4 }}>
-            billy fm
-          </div>
-          <div style={{ fontSize: 20, fontWeight: 700, lineHeight: 1.2 }}>
-            {artist ? artist.display_name : 'Songbook'}
-          </div>
-          <div style={{ fontSize: 11, color: '#888', marginTop: 4 }}>
-            {loading ? '' : `${songs.length} song${songs.length !== 1 ? 's' : ''}`}
-          </div>
+        <div style={{
+          fontSize: 9,
+          fontWeight: 700,
+          letterSpacing: 3,
+          textTransform: 'uppercase',
+          color: '#333',
+          marginBottom: 6,
+        }}>
+          billy fm
+        </div>
+        <div style={{ fontSize: 22, fontWeight: 700, lineHeight: 1.1, color: '#e8e8e8' }}>
+          {loading ? '' : (artist?.display_name ?? 'Songbook')}
+        </div>
+        <div style={{ fontSize: 11, color: '#3a3a3a', marginTop: 6 }}>
+          {loading ? '' : `${songs.length} song${songs.length !== 1 ? 's' : ''}`}
         </div>
       </header>
 
-      {/* Filters */}
+      {/* Sticky filters */}
       <div style={{
-        padding: '12px 20px', borderBottom: '1px solid #e5e5e5',
-        display: 'flex', flexDirection: 'column', gap: 10,
-        position: 'sticky', top: 0, background: '#fff', zIndex: 10,
+        position: 'sticky',
+        top: 0,
+        background: '#0a0a0a',
+        borderBottom: '1px solid #1a1a1a',
+        padding: '10px 20px',
+        zIndex: 10,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 8,
       }}>
         <input
           type="text"
@@ -123,22 +169,30 @@ export default function SongbookPage() {
           value={search}
           onChange={e => setSearch(e.target.value)}
           style={{
-            width: '100%', boxSizing: 'border-box',
-            padding: '9px 12px', fontSize: 13,
-            border: '1px solid #ddd', outline: 'none',
-            fontFamily: 'inherit', color: '#111', background: '#fafafa',
+            width: '100%',
+            boxSizing: 'border-box',
+            padding: '8px 12px',
+            fontSize: 12,
+            background: '#111',
+            border: '1px solid #222',
+            color: '#e8e8e8',
+            outline: 'none',
+            fontFamily: 'monospace',
           }}
         />
         {allTags.length > 0 && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
             <button
               onClick={() => setTagFilter('')}
               style={{
-                fontSize: 9, padding: '3px 9px', fontFamily: 'inherit',
-                textTransform: 'uppercase', letterSpacing: 0.4, cursor: 'pointer',
-                border: '1px solid #ddd',
-                background: !tagFilter ? '#111' : '#fff',
-                color: !tagFilter ? '#fff' : '#888',
+                fontSize: 9, padding: '3px 8px',
+                fontFamily: 'monospace',
+                textTransform: 'uppercase',
+                letterSpacing: 0.5,
+                cursor: 'pointer',
+                border: '1px solid #333',
+                background: !tagFilter ? '#e8e8e8' : 'transparent',
+                color: !tagFilter ? '#000' : '#444',
               }}
             >All</button>
             {allTags.map(t => (
@@ -146,11 +200,14 @@ export default function SongbookPage() {
                 key={t}
                 onClick={() => setTagFilter(prev => prev === t ? '' : t)}
                 style={{
-                  fontSize: 9, padding: '3px 9px', fontFamily: 'inherit',
-                  textTransform: 'uppercase', letterSpacing: 0.4, cursor: 'pointer',
-                  border: '1px solid #ddd',
-                  background: tagFilter === t ? '#111' : '#fff',
-                  color: tagFilter === t ? '#fff' : '#888',
+                  fontSize: 9, padding: '3px 8px',
+                  fontFamily: 'monospace',
+                  textTransform: 'uppercase',
+                  letterSpacing: 0.5,
+                  cursor: 'pointer',
+                  border: '1px solid #333',
+                  background: tagFilter === t ? '#e8e8e8' : 'transparent',
+                  color: tagFilter === t ? '#000' : '#444',
                 }}
               >{t}</button>
             ))}
@@ -159,19 +216,19 @@ export default function SongbookPage() {
       </div>
 
       {/* Song list */}
-      <div style={{ maxWidth: 700, margin: '0 auto' }}>
+      <div style={{ maxWidth: 760, margin: '0 auto' }}>
         {loading && (
-          <div style={{ padding: 40, textAlign: 'center', fontSize: 12, color: '#aaa' }}>
+          <div style={{ padding: 40, textAlign: 'center', fontSize: 11, color: '#333' }}>
             Loading…
           </div>
         )}
         {!loading && error && (
-          <div style={{ padding: 40, textAlign: 'center', fontSize: 12, color: '#c53030' }}>
+          <div style={{ padding: 40, textAlign: 'center', fontSize: 11, color: '#8b3333' }}>
             {error}
           </div>
         )}
         {!loading && !error && filtered.length === 0 && (
-          <div style={{ padding: 40, textAlign: 'center', fontSize: 12, color: '#aaa' }}>
+          <div style={{ padding: 40, textAlign: 'center', fontSize: 11, color: '#333' }}>
             {songs.length === 0 ? 'No songs in this songbook yet.' : 'No results for this filter.'}
           </div>
         )}
@@ -180,9 +237,18 @@ export default function SongbookPage() {
         ))}
       </div>
 
-      {/* Footer */}
+      {/* Footer count */}
       {!loading && !error && filtered.length > 0 && (
-        <div style={{ padding: '20px', textAlign: 'center', fontSize: 10, color: '#ccc', borderTop: '1px solid #f0f0f0', marginTop: 20 }}>
+        <div style={{
+          padding: '16px 20px',
+          textAlign: 'center',
+          fontSize: 9,
+          color: '#2a2a2a',
+          letterSpacing: 0.5,
+          textTransform: 'uppercase',
+          borderTop: '1px solid #1a1a1a',
+          marginTop: 20,
+        }}>
           {filtered.length} song{filtered.length !== 1 ? 's' : ''}
           {(search || tagFilter) && ` · filtered from ${songs.length}`}
         </div>

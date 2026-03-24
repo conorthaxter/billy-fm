@@ -176,6 +176,20 @@ body.dark.black .mp-toolbar   { background: #000; border-color: #1a1a1a; }
 }
 .nav-help-btn:hover { background: #000; color: #fff; }
 
+/* Notifications bell button */
+.nav-notif-btn {
+  background: transparent;
+  border: 1px solid #000;
+  line-height: 1;
+  padding: 3px 7px;
+  cursor: pointer;
+  align-self: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nav-notif-btn:hover { background: #f0f0f0; }
+
 /* Settings icon button */
 .nav-settings-btn {
   background: transparent;
@@ -315,6 +329,8 @@ body.dark .nav-tab-link:hover   { color: #bbb; }
 body.dark .nav-tab-link.active  { color: #fff; border-bottom-color: #fff; }
 body.dark .nav-help-btn         { border-color: #444; color: #ccc; }
 body.dark .nav-help-btn:hover   { background: #ddd; color: #111; }
+body.dark .nav-notif-btn        { border-color: #444; color: #ccc; }
+body.dark .nav-notif-btn:hover  { background: #1a1a1a; }
 body.dark .nav-settings-btn     { border-color: #444; color: #ccc; }
 body.dark .nav-settings-btn:hover { background: #1a1a1a; }
 body.dark .nav-user-cluster     { border-color: #444; }
