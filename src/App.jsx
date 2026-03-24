@@ -11,7 +11,7 @@ import MarketplacePage      from './pages/MarketplacePage';
 import PlaylistsPage        from './pages/PlaylistsPage';
 import PlaylistDetailPage   from './pages/PlaylistDetailPage';
 import PublicRepertoirePage from './pages/PublicRepertoirePage';
-import WeddingBuilderPage   from './pages/WeddingBuilderPage';
+import ClientSetPage        from './pages/ClientSetPage';
 import RequestQueuePage     from './pages/RequestQueuePage';
 import RightPanel           from './components/RightPanel';
 import SplashScreen         from './components/SplashScreen';
@@ -79,6 +79,7 @@ function GlobalRightPanel() {
   // Hide on public / unauthenticated pages
   const hide = !user || ['/login', '/'].some(p => location.pathname === p) ||
     location.pathname.startsWith('/r/') ||
+    location.pathname.startsWith('/set/') ||
     location.pathname.startsWith('/wedding/') ||
     location.pathname.startsWith('/request/');
 
@@ -184,7 +185,7 @@ export default function App() {
               <Route path="/playlists" element={<RequireAuth><PlaylistsPage /></RequireAuth>} />
               <Route path="/playlists/:id" element={<RequireAuth><PlaylistDetailPage /></RequireAuth>} />
               <Route path="/r/:slug"       element={<PublicRepertoirePage />} />
-              <Route path="/wedding/:slug" element={<WeddingBuilderPage />} />
+              <Route path="/set/:slug"     element={<ClientSetPage />} />
               <Route path="/request/:slug" element={<RequestQueuePage />} />
             </Routes>
             <GlobalRightPanel />

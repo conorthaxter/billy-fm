@@ -161,6 +161,13 @@ export async function getClientSet(request: SetRequest, env: Env): Promise<Respo
     .bind(id)
     .all<Record<string, unknown>>();
 
+  // Fetch artist name for the client-facing header
+  const artistRow = await env.DB.prepare(
+    `SELECT id, display_name FROM users WHERE id = ?`,
+  )
+    .bind(set.user_id as string)
+    .first<{ id: string; display_name: string }>();
+
   return json({
     id,
     title: set.title,
@@ -168,9 +175,11 @@ export async function getClientSet(request: SetRequest, env: Env): Promise<Respo
     color_scheme: set.color_scheme ?? 'standard',
     is_locked: !!set.is_locked,
     locked_at: set.locked_at ?? null,
-    off_list_requests_limit: set.off_list_requests ?? 0,
+    off_list_requests_limit: (set.off_list_requests as number) ?? 0,
     event_date: set.event_date ?? null,
     client_name: set.client_name ?? null,
+    artist_id: artistRow?.id ?? null,
+    artist_name: artistRow?.display_name ?? null,
     songs,
     off_list_requests: requestsResult.results ?? [],
   });
