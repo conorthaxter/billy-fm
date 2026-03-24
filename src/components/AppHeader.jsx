@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import SettingsDialog from './SettingsDialog';
+import NotificationDropdown from './NotificationDropdown';
 
 // ─── How-To Modal ─────────────────────────────────────────────────────────────
 
@@ -103,8 +104,9 @@ export default function AppHeader() {
           </div>
         </div>
 
-        {/* ── RIGHT: help, settings, user, logout ── */}
+        {/* ── RIGHT: notifications, help, settings, user, logout ── */}
         <div className="nav-right">
+          {user && <NotificationDropdown />}
           <button
             className="nav-help-btn"
             title="How to use billy-fm"

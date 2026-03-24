@@ -308,6 +308,56 @@ export async function setPlaylistSongs(request: AuthRequest, env: Env): Promise<
 }
 
 // ---------------------------------------------------------------------------
+// PATCH /api/playlists/:id/lock — artist locks or unlocks a client set
+// ---------------------------------------------------------------------------
+
+export async function lockPlaylist(request: AuthRequest, env: Env): Promise<Response> {
+  const { id } = request.params as { id: string };
+
+  const check = await assertOwner(env, id, request.user!.id);
+  if (check instanceof Response) return check;
+
+  const body = await request.json<{ locked: boolean }>();
+  const locked = !!body.locked;
+
+  if (locked) {
+    await env.DB.prepare(
+      `UPDATE playlists SET is_locked = 1, locked_at = datetime('now'), updated_at = datetime('now') WHERE id = ?`,
+    ).bind(id).run();
+  } else {
+    await env.DB.prepare(
+      `UPDATE playlists SET is_locked = 0, locked_at = NULL, updated_at = datetime('now') WHERE id = ?`,
+    ).bind(id).run();
+  }
+
+  const updated = await env.DB.prepare(`SELECT * FROM playlists WHERE id = ?`)
+    .bind(id)
+    .first<Record<string, unknown>>();
+
+  return json(updated!);
+}
+
+// ---------------------------------------------------------------------------
+// GET /api/playlists/:id/submissions — list set submissions (artist only)
+// ---------------------------------------------------------------------------
+
+export async function listSubmissions(request: AuthRequest, env: Env): Promise<Response> {
+  const { id } = request.params as { id: string };
+
+  const check = await assertOwner(env, id, request.user!.id);
+  if (check instanceof Response) return check;
+
+  const rows = await env.DB.prepare(
+    `SELECT id, playlist_id, submitted_at FROM set_submissions
+     WHERE playlist_id = ? ORDER BY submitted_at DESC`,
+  )
+    .bind(id)
+    .all<Record<string, unknown>>();
+
+  return json(rows.results ?? []);
+}
+
+// ---------------------------------------------------------------------------
 // PATCH /api/playlists/:id/songs/:songId
 // ---------------------------------------------------------------------------
 
