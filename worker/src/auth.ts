@@ -141,16 +141,15 @@ export async function handleGoogleCallback(
     picture?: string;
   };
 
-  // Upsert user — insert on first login, update display fields on subsequent logins.
-  // The generated UUID is only used on first insert; conflicts keep the existing id.
+  // Upsert user — insert on first login, do NOT overwrite display_name on subsequent logins
+  // so users can customise it via PATCH /auth/me without it being reset by Google each login.
   await env.DB.prepare(
     `INSERT INTO users (id, email, display_name, google_id, avatar_url)
      VALUES (?, ?, ?, ?, ?)
      ON CONFLICT(google_id) DO UPDATE SET
-       email        = excluded.email,
-       display_name = excluded.display_name,
-       avatar_url   = excluded.avatar_url,
-       updated_at   = datetime('now')`,
+       email      = excluded.email,
+       avatar_url = excluded.avatar_url,
+       updated_at = datetime('now')`,
   )
     .bind(
       crypto.randomUUID(),
@@ -218,7 +217,57 @@ export async function handleLogout(
 // ---------------------------------------------------------------------------
 
 export function handleMe(request: AuthRequest): Response {
-  // withAuth guarantees request.user is set before this handler runs
   if (!request.user) return error(401, { error: 'Unauthorized' });
   return json(request.user);
+}
+
+// ---------------------------------------------------------------------------
+// PATCH /auth/me — update display_name and/or mailing_list_opt_in
+// ---------------------------------------------------------------------------
+
+export async function handlePatchMe(request: AuthRequest, env: Env): Promise<Response> {
+  const user = request.user!;
+
+  const body = await request.json<{
+    display_name?: string;
+    mailing_list_opt_in?: boolean;
+  }>();
+
+  const sets: string[]    = [];
+  const values: unknown[] = [];
+
+  if (body.display_name !== undefined) {
+    const trimmed = body.display_name.trim();
+    if (!trimmed) return error(400, { error: 'display_name cannot be empty' });
+    sets.push('display_name = ?');
+    values.push(trimmed);
+  }
+
+  if (body.mailing_list_opt_in !== undefined) {
+    sets.push('mailing_list_opt_in = ?');
+    values.push(body.mailing_list_opt_in ? 1 : 0);
+    if (body.mailing_list_opt_in) {
+      sets.push(`opted_in_at = datetime('now')`);
+    }
+  }
+
+  if (sets.length === 0) return error(400, { error: 'No fields to update' });
+
+  sets.push(`updated_at = datetime('now')`);
+  values.push(user.id);
+
+  await env.DB.prepare(
+    `UPDATE users SET ${sets.join(', ')} WHERE id = ?`,
+  )
+    .bind(...values)
+    .run();
+
+  const updated = await env.DB.prepare(
+    `SELECT id, email, display_name, avatar_url, is_performer, mailing_list_opt_in
+     FROM users WHERE id = ?`,
+  )
+    .bind(user.id)
+    .first<Record<string, unknown>>();
+
+  return json(updated!);
 }

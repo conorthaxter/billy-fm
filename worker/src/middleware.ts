@@ -13,6 +13,7 @@ export interface User {
   display_name: string;
   avatar_url: string | null;
   is_performer: number; // D1 returns 0/1 for BOOLEAN
+  mailing_list_opt_in: number; // 0 = no, 1 = yes
 }
 
 // Extends IRequest so route handlers can type-safely access request.user
@@ -99,6 +100,7 @@ const SERVICE_USER: User = {
   display_name: 'Billy Book Service',
   avatar_url: null,
   is_performer: 0,
+  mailing_list_opt_in: 0,
 };
 
 export async function withServiceAuth(
@@ -138,7 +140,7 @@ export async function withAuth(
   if (!sessionId) return error(401, { error: 'Unauthorized' });
 
   const user = await env.DB.prepare(
-    `SELECT u.id, u.email, u.display_name, u.avatar_url, u.is_performer
+    `SELECT u.id, u.email, u.display_name, u.avatar_url, u.is_performer, u.mailing_list_opt_in
      FROM auth_sessions s
      JOIN users u ON u.id = s.user_id
      WHERE s.id = ? AND s.expires_at > datetime('now')`,

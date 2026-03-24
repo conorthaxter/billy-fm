@@ -11,6 +11,7 @@ import {
   handleGoogleCallback,
   handleLogout,
   handleMe,
+  handlePatchMe,
 } from './auth';
 import { listSongs, getSong, createSong, patchSong } from './routes/songs';
 import {
@@ -99,7 +100,8 @@ router.get('/api/health', () => json({ ok: true }));
 router.get('/auth/google', handleGoogleRedirect);
 router.get('/auth/google/callback', handleGoogleCallback);
 router.post('/auth/logout', handleLogout);
-router.get('/auth/me', withAuth, handleMe);
+router.get('/auth/me',   withAuth, handleMe);
+router.patch('/auth/me', withAuth, handlePatchMe);
 
 // ---------------------------------------------------------------------------
 // Songs (global marketplace)
@@ -213,7 +215,47 @@ router.all('*', () => error(404, { error: 'Not found' }));
 // Worker export
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Weekly cron — notify artist of new mailing list opt-ins
+// Runs every Monday at 4pm UTC (wrangler.toml: "0 16 * * 1")
+// ---------------------------------------------------------------------------
+
+async function handleScheduled(env: Env): Promise<void> {
+  const rows = await env.DB.prepare(
+    `SELECT email, display_name, opted_in_at
+     FROM users
+     WHERE mailing_list_opt_in = 1
+       AND opted_in_at > datetime('now', '-7 days')
+     ORDER BY opted_in_at DESC`,
+  ).all<{ email: string; display_name: string; opted_in_at: string }>();
+
+  const newOptIns = rows.results ?? [];
+  if (!newOptIns.length) return;
+
+  const lines = newOptIns.map(
+    (u) => `  ${u.display_name} <${u.email}> — ${u.opted_in_at}`,
+  );
+
+  const body = [
+    `${newOptIns.length} new mailing list subscriber${newOptIns.length !== 1 ? 's' : ''} this week:`,
+    '',
+    ...lines,
+    '',
+    'Add these to your Substack list.',
+  ].join('\n');
+
+  await sendNotificationEmail(env, {
+    to: env.ARTIST_EMAIL ?? '',
+    subject: 'URGENT: ADD EMAILS TO SUBSTACK LIST',
+    body,
+  });
+}
+
 export default {
   fetch: (request: Request, env: Env, ctx: ExecutionContext) =>
     router.fetch(request, env, ctx),
+
+  scheduled: (_event: ScheduledEvent, env: Env, ctx: ExecutionContext) => {
+    ctx.waitUntil(handleScheduled(env));
+  },
 };
