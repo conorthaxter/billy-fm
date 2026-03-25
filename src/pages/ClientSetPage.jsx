@@ -10,26 +10,64 @@ import {
 
 const SCHEMES = {
   standard: {
-    '--cs-bg':          '#ffffff',
-    '--cs-card':        '#f5f5f5',
-    '--cs-accent':      '#000000',
-    '--cs-text':        '#111111',
-    '--cs-border':      '#e0e0e0',
-    '--cs-muted':       '#888888',
-    '--cs-bank-bg':     '#fafafa',
-    '--cs-hdr-bg':      '#111111',
-    '--cs-hdr-text':    '#ffffff',
+    '--cs-bg':       '#0a0a0a',
+    '--cs-card':     '#141414',
+    '--cs-accent':   '#e8e8e8',
+    '--cs-text':     '#e8e8e8',
+    '--cs-border':   '#222222',
+    '--cs-muted':    '#555555',
+    '--cs-bank-bg':  '#0f0f0f',
+    '--cs-hdr-bg':   '#111111',
+    '--cs-hdr-text': '#e8e8e8',
+    '--cs-btn-text': '#000000',
   },
   wedding: {
-    '--cs-bg':          '#faf8f4',
-    '--cs-card':        '#f0ebe3',
-    '--cs-accent':      '#7c6347',
-    '--cs-text':        '#2a2a2a',
-    '--cs-border':      '#d4c5b0',
-    '--cs-muted':       '#9a8a76',
-    '--cs-bank-bg':     '#f5f2ec',
-    '--cs-hdr-bg':      '#2a2a2a',
-    '--cs-hdr-text':    '#faf8f4',
+    '--cs-bg':       '#faf7f2',
+    '--cs-card':     '#f2ece2',
+    '--cs-accent':   '#b8960c',
+    '--cs-text':     '#1a1a1a',
+    '--cs-border':   '#ddd3c0',
+    '--cs-muted':    '#8a7a60',
+    '--cs-bank-bg':  '#f5f0e8',
+    '--cs-hdr-bg':   '#1a1a1a',
+    '--cs-hdr-text': '#faf7f2',
+    '--cs-btn-text': '#ffffff',
+  },
+  corporate: {
+    '--cs-bg':       '#ffffff',
+    '--cs-card':     '#f4f6f9',
+    '--cs-accent':   '#1e3a8a',
+    '--cs-text':     '#1e3a8a',
+    '--cs-border':   '#dde3ef',
+    '--cs-muted':    '#6b7fa0',
+    '--cs-bank-bg':  '#f8f9fc',
+    '--cs-hdr-bg':   '#1e3a8a',
+    '--cs-hdr-text': '#ffffff',
+    '--cs-btn-text': '#ffffff',
+  },
+  birthday: {
+    '--cs-bg':       '#fff8f0',
+    '--cs-card':     '#ffeedd',
+    '--cs-accent':   '#e8734a',
+    '--cs-text':     '#1a1a1a',
+    '--cs-border':   '#f0d8c4',
+    '--cs-muted':    '#a07858',
+    '--cs-bank-bg':  '#fff4e8',
+    '--cs-hdr-bg':   '#1a1a1a',
+    '--cs-hdr-text': '#fff8f0',
+    '--cs-btn-text': '#ffffff',
+  },
+  residency: {
+    '--cs-bg':       '#0a0a0a',
+    '--cs-card':     '#12101f',
+    '--cs-accent':   '#6366f1',
+    '--cs-text':     '#e8e8f4',
+    '--cs-border':   '#1e1a30',
+    '--cs-muted':    '#5a5580',
+    '--cs-bank-bg':  '#0c0a14',
+    '--cs-hdr-bg':   '#0c0a14',
+    '--cs-hdr-text': '#e8e8f4',
+    '--cs-btn-text': '#ffffff',
   },
 };
 
@@ -120,7 +158,7 @@ function PasswordGate({ slug, onSuccess }) {
             style={{
               width: '100%', padding: '12px 0', fontSize: 12, fontWeight: 700,
               letterSpacing: 1, textTransform: 'uppercase',
-              background: 'var(--cs-accent)', color: '#fff', border: 'none',
+              background: 'var(--cs-accent)', color: 'var(--cs-btn-text)', border: 'none',
               cursor: busy ? 'wait' : 'pointer', fontFamily: 'inherit',
               opacity: (!pwd || busy) ? 0.5 : 1,
             }}
@@ -165,7 +203,7 @@ function BankSong({ song, inSet, locked, onAdd }) {
             flexShrink: 0, padding: '5px 10px', fontSize: 10, fontWeight: 700,
             letterSpacing: 0.3, textTransform: 'uppercase',
             background: inSet ? 'transparent' : 'var(--cs-accent)',
-            color: inSet ? 'var(--cs-muted)' : '#fff',
+            color: inSet ? 'var(--cs-muted)' : 'var(--cs-btn-text)',
             border: `1px solid ${inSet ? 'var(--cs-border)' : 'var(--cs-accent)'}`,
             cursor: inSet ? 'default' : 'pointer', fontFamily: 'inherit',
           }}
@@ -362,7 +400,7 @@ function SubmitModal({ items, requests, busy, onConfirm, onCancel }) {
             disabled={busy}
             style={{
               padding: '9px 18px', fontSize: 12, fontWeight: 700, fontFamily: 'inherit',
-              background: 'var(--cs-accent)', color: '#fff', border: 'none',
+              background: 'var(--cs-accent)', color: 'var(--cs-btn-text)', border: 'none',
               cursor: busy ? 'wait' : 'pointer', opacity: busy ? 0.7 : 1,
             }}
           >
@@ -398,9 +436,9 @@ export default function ClientSetPage() {
   const locked   = submitted || !!(setData?.is_locked);
   const songCount = items.filter(i => i.type === 'song').length;
 
-  // ── Load set ────────────────────────────────────────────────────────────────
+  // ── Fetch set data (called after auth is confirmed) ─────────────────────────
 
-  const loadSet = useCallback(async () => {
+  const fetchSetData = useCallback(async () => {
     setLoadErr('');
     try {
       const data = await getSet(slug);
@@ -425,7 +463,23 @@ export default function ClientSetPage() {
     }
   }, [slug]);
 
-  useEffect(() => { loadSet(); }, [loadSet]);
+  // ── Initial load: probe verify to detect password requirement ───────────────
+  // POST /verify with no password:
+  //   - set has no password → server sets cookie, returns ok → proceed to load
+  //   - set has password    → server returns 400 "password required" → show gate
+
+  useEffect(() => {
+    verifySet(slug, undefined)
+      .then(() => fetchSetData())
+      .catch(err => {
+        if (err.status === 400) {
+          setPhase('password');
+        } else {
+          // Unexpected error (404, network, etc.) — try loading anyway
+          fetchSetData();
+        }
+      });
+  }, [slug, fetchSetData]);
 
   // ── Save order (debounced) ───────────────────────────────────────────────────
 
@@ -545,7 +599,7 @@ export default function ClientSetPage() {
   if (phase === 'password') {
     return (
       <div style={{ ...scheme, fontFamily: 'monospace', minHeight: '100dvh' }}>
-        <PasswordGate slug={slug} onSuccess={loadSet} />
+        <PasswordGate slug={slug} onSuccess={fetchSetData} />
       </div>
     );
   }
@@ -661,7 +715,7 @@ export default function ClientSetPage() {
             style={{
               width: '100%', padding: 14, fontSize: 12, fontWeight: 700,
               letterSpacing: 0.8, textTransform: 'uppercase', fontFamily: 'inherit',
-              background: 'var(--cs-accent)', color: '#fff', border: 'none',
+              background: 'var(--cs-accent)', color: 'var(--cs-btn-text)', border: 'none',
               cursor: songCount === 0 ? 'not-allowed' : 'pointer',
               opacity: songCount === 0 ? 0.4 : 1,
             }}
@@ -704,7 +758,7 @@ export default function ClientSetPage() {
                 textTransform: 'uppercase', letterSpacing: 0.3,
                 border: '1px solid var(--cs-border)',
                 background: !tagFilter ? 'var(--cs-accent)' : 'var(--cs-bg)',
-                color: !tagFilter ? '#fff' : 'var(--cs-muted)',
+                color: !tagFilter ? 'var(--cs-btn-text)' : 'var(--cs-muted)',
                 cursor: 'pointer',
               }}
             >All</button>
@@ -717,7 +771,7 @@ export default function ClientSetPage() {
                   textTransform: 'uppercase', letterSpacing: 0.3,
                   border: '1px solid var(--cs-border)',
                   background: tagFilter === t ? 'var(--cs-accent)' : 'var(--cs-bg)',
-                  color: tagFilter === t ? '#fff' : 'var(--cs-muted)',
+                  color: tagFilter === t ? 'var(--cs-btn-text)' : 'var(--cs-muted)',
                   cursor: 'pointer',
                 }}
               >{t}</button>
@@ -725,7 +779,7 @@ export default function ClientSetPage() {
           </div>
         )}
       </div>
-      <div style={{ flex: 1, overflowY: 'auto', minHeight: isMobile ? 0 : undefined, maxHeight: isMobile ? '42vh' : undefined }}>
+      <div style={{ overflowY: 'auto', maxHeight: isMobile ? '42vh' : '65vh' }}>
         {filteredBank.length === 0 && (
           <div style={{ padding: 20, fontSize: 12, color: 'var(--cs-muted)', textAlign: 'center' }}>
             {songBank.length === 0 ? 'Loading songs…' : 'No results'}
@@ -745,7 +799,7 @@ export default function ClientSetPage() {
   );
 
   return (
-    <div style={{ ...scheme, minHeight: '100dvh', fontFamily: 'monospace', background: 'var(--cs-bg)', color: 'var(--cs-text)' }}>
+    <div style={{ ...scheme, height: '100dvh', overflowY: 'auto', fontFamily: 'monospace', background: 'var(--cs-bg)', color: 'var(--cs-text)' }}>
 
       {/* Header */}
       <header style={{
@@ -798,10 +852,9 @@ export default function ClientSetPage() {
         gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
         maxWidth: 1100,
         margin: '0 auto',
-        minHeight: 'calc(100dvh - 70px)',
       }}>
         {bankPanelContent}
-        <div style={{ overflowY: isMobile ? undefined : 'auto' }}>
+        <div>
           {setPanelContent}
         </div>
       </div>
