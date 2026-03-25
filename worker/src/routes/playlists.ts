@@ -213,22 +213,38 @@ export async function patchPlaylist(request: AuthRequest, env: Env): Promise<Res
     tip_venmo?: string;
     tip_message?: string;
     tip_minimum?: number;
+    // Client set fields (Phase 3f)
+    color_scheme?: string;
+    off_list_requests?: number;
+    source?: string;
+    source_gig_id?: string;
+    metadata?: Record<string, unknown> | string;
+    password?: string;
   }>();
 
   const sets: string[]    = [];
   const values: unknown[] = [];
 
-  if (body.title         !== undefined) { sets.push('title = ?');         values.push(body.title.trim()); }
-  if (body.notes         !== undefined) { sets.push('notes = ?');         values.push(body.notes); }
-  if (body.is_public     !== undefined) { sets.push('is_public = ?');     values.push(body.is_public ? 1 : 0); }
-  if (body.is_favorited  !== undefined) { sets.push('is_favorited = ?');  values.push(body.is_favorited ? 1 : 0); }
-  if (body.client_name   !== undefined) { sets.push('client_name = ?');   values.push(body.client_name); }
-  if (body.event_date    !== undefined) { sets.push('event_date = ?');    values.push(body.event_date); }
-  if (body.playlist_type !== undefined) { sets.push('playlist_type = ?'); values.push(body.playlist_type); }
-  if (body.tip_enabled   !== undefined) { sets.push('tip_enabled = ?');   values.push(body.tip_enabled ? 1 : 0); }
-  if (body.tip_venmo     !== undefined) { sets.push('tip_venmo = ?');     values.push(body.tip_venmo); }
-  if (body.tip_message   !== undefined) { sets.push('tip_message = ?');   values.push(body.tip_message); }
-  if (body.tip_minimum   !== undefined) { sets.push('tip_minimum = ?');   values.push(body.tip_minimum); }
+  if (body.title              !== undefined) { sets.push('title = ?');              values.push(body.title.trim()); }
+  if (body.notes              !== undefined) { sets.push('notes = ?');              values.push(body.notes); }
+  if (body.is_public          !== undefined) { sets.push('is_public = ?');          values.push(body.is_public ? 1 : 0); }
+  if (body.is_favorited       !== undefined) { sets.push('is_favorited = ?');       values.push(body.is_favorited ? 1 : 0); }
+  if (body.client_name        !== undefined) { sets.push('client_name = ?');        values.push(body.client_name); }
+  if (body.event_date         !== undefined) { sets.push('event_date = ?');         values.push(body.event_date); }
+  if (body.playlist_type      !== undefined) { sets.push('playlist_type = ?');      values.push(body.playlist_type); }
+  if (body.tip_enabled        !== undefined) { sets.push('tip_enabled = ?');        values.push(body.tip_enabled ? 1 : 0); }
+  if (body.tip_venmo          !== undefined) { sets.push('tip_venmo = ?');          values.push(body.tip_venmo); }
+  if (body.tip_message        !== undefined) { sets.push('tip_message = ?');        values.push(body.tip_message); }
+  if (body.tip_minimum        !== undefined) { sets.push('tip_minimum = ?');        values.push(body.tip_minimum); }
+  if (body.color_scheme       !== undefined) { sets.push('color_scheme = ?');       values.push(body.color_scheme); }
+  if (body.off_list_requests  !== undefined) { sets.push('off_list_requests = ?');  values.push(body.off_list_requests); }
+  if (body.source             !== undefined) { sets.push('source = ?');             values.push(body.source); }
+  if (body.source_gig_id      !== undefined) { sets.push('source_gig_id = ?');      values.push(body.source_gig_id); }
+  if (body.password           !== undefined) { sets.push('password = ?');           values.push(body.password); }
+  if (body.metadata           !== undefined) {
+    sets.push('metadata = ?');
+    values.push(typeof body.metadata === 'string' ? body.metadata : JSON.stringify(body.metadata));
+  }
 
   if (sets.length === 0) return error(400, { error: 'No fields to update' });
 
