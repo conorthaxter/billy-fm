@@ -5,11 +5,12 @@ const STORAGE_KEY = 'bfm_ml_prompted';
 
 export default function MailingListPrompt() {
   const { user, updateUser } = useContext(AuthContext);
-  const [visible, setVisible] = useState(() => {
+  const [visible,  setVisible]  = useState(() => {
     if (typeof window === 'undefined') return false;
     return !localStorage.getItem(STORAGE_KEY);
   });
-  const [saving, setSaving] = useState(false);
+  const [checked,  setChecked]  = useState(false);
+  const [saving,   setSaving]   = useState(false);
 
   // Only show to logged-in users who haven't opted in yet and haven't been prompted
   if (!visible || !user || user.mailing_list_opt_in) return null;
@@ -19,49 +20,63 @@ export default function MailingListPrompt() {
     setVisible(false);
   }
 
-  async function optIn() {
-    setSaving(true);
-    try {
-      await updateUser({ mailing_list_opt_in: true });
-    } catch { /* ignore */ }
-    localStorage.setItem(STORAGE_KEY, '1');
-    setVisible(false);
+  async function handleContinue() {
+    if (checked) {
+      setSaving(true);
+      try {
+        await updateUser({ mailing_list_opt_in: true });
+      } catch { /* ignore */ }
+    }
+    dismiss();
   }
 
   return (
     <div style={{
-      position: 'fixed', bottom: 20, left: '50%', transform: 'translateX(-50%)',
-      background: '#111', color: '#fff', padding: '14px 18px',
-      maxWidth: 380, width: 'calc(100% - 40px)',
-      boxShadow: '0 4px 24px rgba(0,0,0,0.3)',
-      zIndex: 9999, fontFamily: 'monospace',
-      display: 'flex', flexDirection: 'column', gap: 10,
+      position: 'fixed', inset: 0,
+      background: 'rgba(0,0,0,0.7)',
+      backdropFilter: 'blur(8px)',
+      WebkitBackdropFilter: 'blur(8px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      zIndex: 9999, padding: 20, boxSizing: 'border-box',
     }}>
-      <div style={{ fontSize: 12, lineHeight: 1.5 }}>
-        Want updates on new music, shows, and releases? Join the mailing list.
-      </div>
-      <div style={{ display: 'flex', gap: 8 }}>
+      <div style={{
+        background: '#111', color: '#e8e8e8',
+        maxWidth: 480, width: '100%',
+        padding: 40, borderRadius: 12,
+        boxShadow: '0 8px 40px rgba(0,0,0,0.6)',
+        fontFamily: 'Inter, sans-serif',
+      }}>
+        <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 10, color: '#fff' }}>
+          Stay in the loop
+        </div>
+        <div style={{ fontSize: 14, color: '#aaa', marginBottom: 28, lineHeight: 1.6 }}>
+          Receive updates from the developer of billy-fm.
+        </div>
+
+        <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', marginBottom: 28 }}>
+          <input
+            type="checkbox"
+            checked={checked}
+            onChange={e => setChecked(e.target.checked)}
+            style={{ width: 16, height: 16, cursor: 'pointer', flexShrink: 0 }}
+          />
+          <span style={{ fontSize: 13, color: '#ccc' }}>Yes, add me to the list</span>
+        </label>
+
         <button
-          onClick={optIn}
+          onClick={handleContinue}
           disabled={saving}
           style={{
-            flex: 1, background: '#fff', color: '#111',
-            border: 'none', padding: '7px 0', fontSize: 11,
-            fontFamily: 'monospace', cursor: 'pointer', fontWeight: 700,
-            textTransform: 'uppercase', letterSpacing: 0.5,
+            width: '100%', padding: '13px 0',
+            fontSize: 13, fontWeight: 700, letterSpacing: 0.5,
+            background: '#e8e8e8', color: '#111',
+            border: 'none', borderRadius: 6,
+            cursor: saving ? 'wait' : 'pointer',
+            fontFamily: 'inherit',
+            opacity: saving ? 0.7 : 1,
           }}
         >
-          {saving ? '…' : 'Yes, sign me up'}
-        </button>
-        <button
-          onClick={dismiss}
-          style={{
-            background: 'transparent', color: '#888',
-            border: '1px solid #444', padding: '7px 12px', fontSize: 11,
-            fontFamily: 'monospace', cursor: 'pointer',
-          }}
-        >
-          No thanks
+          {saving ? 'Saving…' : 'Continue'}
         </button>
       </div>
     </div>
