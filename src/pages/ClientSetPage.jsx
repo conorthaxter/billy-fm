@@ -88,6 +88,13 @@ function formatDate(iso) {
   } catch { return iso; }
 }
 
+function formatLockedAt(isoDatetime) {
+  if (!isoDatetime) return '';
+  try {
+    return new Date(isoDatetime).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  } catch { return isoDatetime; }
+}
+
 function songToItem(song) {
   return { id: song.song_id, type: 'song', song: { ...song } };
 }
@@ -442,6 +449,7 @@ export default function ClientSetPage() {
     setLoadErr('');
     try {
       const data = await getSet(slug);
+      console.log('[ClientSetPage] color_scheme:', data.color_scheme);
       setSetData(data);
       setItems(data.songs.map(songToItem));
       setRequests(Array.from({ length: data.off_list_requests_limit ?? 0 }, () => ''));
@@ -590,7 +598,7 @@ export default function ClientSetPage() {
 
   if (phase === 'loading') {
     return (
-      <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace', fontSize: 12, color: '#888', background: '#fff' }}>
+      <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter, sans-serif', fontSize: 12, color: '#888', background: '#fff' }}>
         Loading…
       </div>
     );
@@ -598,7 +606,7 @@ export default function ClientSetPage() {
 
   if (phase === 'password') {
     return (
-      <div style={{ ...scheme, fontFamily: 'monospace', minHeight: '100dvh' }}>
+      <div style={{ ...scheme, fontFamily: 'Inter, sans-serif', minHeight: '100dvh' }}>
         <PasswordGate slug={slug} onSuccess={fetchSetData} />
       </div>
     );
@@ -606,7 +614,7 @@ export default function ClientSetPage() {
 
   if (loadErr) {
     return (
-      <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace' }}>
+      <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter, sans-serif' }}>
         <div style={{ textAlign: 'center', color: '#888', padding: 24 }}>
           <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8, color: '#111' }}>Set not found</div>
           <div style={{ fontSize: 12 }}>{loadErr}</div>
@@ -736,6 +744,29 @@ export default function ClientSetPage() {
         <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.8, color: 'var(--cs-muted)', marginBottom: 8 }}>
           Song Bank
         </div>
+        {setData?.color_scheme === 'wedding' && (
+          tagFilter === 'wedding' ? (
+            <button
+              onClick={() => setTagFilter('')}
+              style={{
+                display: 'block', width: '100%', marginBottom: 8,
+                padding: '9px 14px', fontSize: 12, fontFamily: 'Georgia, serif',
+                background: 'var(--cs-accent)', color: 'var(--cs-btn-text)',
+                border: 'none', cursor: 'pointer', textAlign: 'center', letterSpacing: 0.3,
+              }}
+            >Show All Songs</button>
+          ) : (
+            <button
+              onClick={() => setTagFilter('wedding')}
+              style={{
+                display: 'block', width: '100%', marginBottom: 8,
+                padding: '9px 14px', fontSize: 14, fontFamily: 'Georgia, serif',
+                background: 'none', color: 'var(--cs-accent)',
+                border: '1px solid var(--cs-accent)', cursor: 'pointer', textAlign: 'center',
+              }}
+            >Browse Wedding Songs ♡</button>
+          )
+        )}
         <input
           type="text"
           placeholder="Search…"
@@ -799,7 +830,7 @@ export default function ClientSetPage() {
   );
 
   return (
-    <div style={{ ...scheme, height: '100dvh', overflowY: 'auto', fontFamily: 'monospace', background: 'var(--cs-bg)', color: 'var(--cs-text)' }}>
+    <div style={{ ...scheme, height: '100dvh', overflowY: 'auto', fontFamily: 'Inter, sans-serif', background: 'var(--cs-bg)', color: 'var(--cs-text)' }}>
 
       {/* Header */}
       <header style={{
@@ -840,7 +871,7 @@ export default function ClientSetPage() {
           {submitted
             ? 'Your set has been submitted. Your artist has been notified. ✓'
             : setData?.locked_at
-              ? `This set was finalized on ${formatDate(setData.locked_at)}.`
+              ? `This set was finalized on ${formatLockedAt(setData.locked_at)}.`
               : 'Your set has been finalized by your artist.'
           }
         </div>
