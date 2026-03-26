@@ -374,6 +374,57 @@ export async function listSubmissions(request: AuthRequest, env: Env): Promise<R
 }
 
 // ---------------------------------------------------------------------------
+// POST /api/playlists/:id/songs  — add one song to end
+// ---------------------------------------------------------------------------
+
+export async function addPlaylistSong(request: AuthRequest, env: Env): Promise<Response> {
+  const { id } = request.params as { id: string };
+
+  const check = await assertOwner(env, id, request.user!.id);
+  if (check instanceof Response) return check;
+
+  const body = await request.json<{ song_id: string }>();
+  if (!body.song_id) return error(400, { error: 'song_id is required' });
+
+  const maxRow = await env.DB.prepare(
+    `SELECT COALESCE(MAX(position), -1) AS max_pos FROM playlist_songs WHERE playlist_id = ?`,
+  ).bind(id).first<{ max_pos: number }>();
+
+  const position = (maxRow?.max_pos ?? -1) + 1;
+
+  await env.DB.prepare(
+    `INSERT OR IGNORE INTO playlist_songs (playlist_id, song_id, position) VALUES (?, ?, ?)`,
+  ).bind(id, body.song_id, position).run();
+
+  await env.DB.prepare(
+    `UPDATE playlists SET updated_at = datetime('now') WHERE id = ?`,
+  ).bind(id).run();
+
+  return json({ ok: true, position }, { status: 201 });
+}
+
+// ---------------------------------------------------------------------------
+// DELETE /api/playlists/:id/songs/:songId  — remove one song
+// ---------------------------------------------------------------------------
+
+export async function removePlaylistSong(request: AuthRequest, env: Env): Promise<Response> {
+  const { id, songId } = request.params as { id: string; songId: string };
+
+  const check = await assertOwner(env, id, request.user!.id);
+  if (check instanceof Response) return check;
+
+  await env.DB.prepare(
+    `DELETE FROM playlist_songs WHERE playlist_id = ? AND song_id = ?`,
+  ).bind(id, songId).run();
+
+  await env.DB.prepare(
+    `UPDATE playlists SET updated_at = datetime('now') WHERE id = ?`,
+  ).bind(id).run();
+
+  return json({ ok: true });
+}
+
+// ---------------------------------------------------------------------------
 // PATCH /api/playlists/:id/songs/:songId
 // ---------------------------------------------------------------------------
 

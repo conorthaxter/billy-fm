@@ -1448,6 +1448,164 @@ body.dark .pl-song-row.selected { border-color: #555; background: #1a1a1a; }
 body.dark .pl-detail-notes { border-color: #333; }
 body.dark .pl-detail-notes:focus { border-color: #888; }
 
+/* Delete button on song rows */
+.pl-song-delete {
+  margin-left: 6px;
+  padding: 0 6px;
+  font-size: 16px;
+  line-height: 1;
+  color: #bbb;
+  opacity: 0;
+  transition: opacity .15s, color .15s;
+}
+.pl-song-row:hover .pl-song-delete { opacity: 1; }
+.pl-song-delete:hover { color: #e55; }
+body.dark .pl-song-delete { color: #555; }
+body.dark .pl-song-delete:hover { color: #e55; }
+
+/* Add Songs controls */
+.pl-add-hd {
+  margin: 8px 0 12px;
+  position: relative;
+}
+.pl-add-btn, .pl-add-browse-btn {
+  font-size: 11px;
+  padding: 4px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-right: 6px;
+}
+.pl-add-btn:hover, .pl-add-browse-btn:hover { border-color: #888; }
+body.dark .pl-add-btn, body.dark .pl-add-browse-btn { border-color: #444; color: #ccc; }
+body.dark .pl-add-btn:hover, body.dark .pl-add-browse-btn:hover { border-color: #888; }
+.pl-add-search-wrap { display: flex; align-items: center; gap: 6px; position: relative; }
+.pl-add-search {
+  flex: 1;
+  max-width: 320px;
+  padding: 5px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 13px;
+  background: var(--bg);
+  color: var(--fg);
+}
+.pl-add-search:focus { outline: none; border-color: #888; }
+body.dark .pl-add-search { border-color: #444; }
+.pl-add-dismiss { font-size: 14px; color: #888; padding: 4px 6px; }
+.pl-add-results {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 360px;
+  background: var(--bg);
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.12);
+  z-index: 50;
+  max-height: 240px;
+  overflow-y: auto;
+}
+body.dark .pl-add-results { border-color: #444; box-shadow: 0 4px 16px rgba(0,0,0,.5); }
+.pl-add-result-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+}
+.pl-add-result-row:last-child { border-bottom: none; }
+.pl-add-result-row:hover { background: #f5f5f5; }
+body.dark .pl-add-result-row { border-bottom-color: #222; }
+body.dark .pl-add-result-row:hover { background: #1a1a1a; }
+.pl-add-result-title { font-size: 13px; font-weight: 600; }
+.pl-add-result-artist { font-size: 11px; color: #888; }
+
+/* Browse Library split-pane layout */
+.pl-browse-layout {
+  position: fixed;
+  top: 42px; left: 0; right: var(--rp); bottom: 0;
+  display: flex;
+  background: var(--bg);
+}
+.pl-browse-left {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #e0e0e0;
+  min-width: 0;
+}
+body.dark .pl-browse-left { border-right-color: #222; }
+.pl-browse-right {
+  width: 320px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.pl-browse-hd {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e0e0e0;
+  flex-shrink: 0;
+}
+body.dark .pl-browse-hd { border-bottom-color: #222; }
+.pl-browse-hd-title { font-weight: 700; font-size: 14px; flex: 1; }
+.pl-browse-count { font-size: 11px; color: #888; }
+.pl-browse-search {
+  padding: 4px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 13px;
+  background: var(--bg);
+  color: var(--fg);
+  width: 200px;
+}
+.pl-browse-search:focus { outline: none; border-color: #888; }
+body.dark .pl-browse-search { border-color: #444; }
+.pl-browse-done {
+  font-size: 11px;
+  padding: 4px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.pl-browse-done:hover { border-color: #888; background: #f5f5f5; }
+body.dark .pl-browse-done { border-color: #444; color: #ccc; }
+body.dark .pl-browse-done:hover { background: #1a1a1a; }
+.pl-browse-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+.pl-browse-right .pl-song-list { flex: 1; overflow-y: auto; }
+
+/* Library song rows in browse mode */
+.pl-lib-row {
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+}
+.pl-lib-row:hover { background: #f5f5f5; }
+body.dark .pl-lib-row { border-bottom-color: #1a1a1a; }
+body.dark .pl-lib-row:hover { background: #1a1a1a; }
+.pl-lib-info { flex: 1; min-width: 0; }
+.pl-lib-title { display: block; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pl-lib-artist { display: block; font-size: 11px; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pl-lib-add {
+  font-size: 18px;
+  padding: 0 8px;
+  color: #888;
+  line-height: 1;
+}
+.pl-lib-add:hover { color: #000; }
+body.dark .pl-lib-add:hover { color: #fff; }
+
 /* ============================================================
    SORT CONTROLS
    ============================================================ */

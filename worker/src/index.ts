@@ -28,6 +28,8 @@ import {
   patchPlaylist,
   deletePlaylist,
   setPlaylistSongs,
+  addPlaylistSong,
+  removePlaylistSong,
   patchPlaylistSong,
   lockPlaylist,
   listSubmissions,
@@ -51,6 +53,7 @@ import { listTransitions, createTransition, deleteTransition } from './routes/tr
 import { getSongbook } from './routes/songbook';
 import { getRepertoire } from './routes/repertoire';
 import { listNotifications, markNotificationRead, markAllNotificationsRead } from './routes/notifications';
+import { sendNotificationEmail } from './email';
 
 // ---------------------------------------------------------------------------
 // Env bindings (declared in wrangler.toml)
@@ -132,6 +135,8 @@ router.get('/api/playlists/:id',                      withAuth, getPlaylist);
 router.patch('/api/playlists/:id',                    withAuthOrService, patchPlaylist);
 router.delete('/api/playlists/:id',                   withAuth, deletePlaylist);
 router.put('/api/playlists/:id/songs',                withAuth, setPlaylistSongs);
+router.post('/api/playlists/:id/songs',               withAuth, addPlaylistSong);
+router.delete('/api/playlists/:id/songs/:songId',     withAuth, removePlaylistSong);
 router.patch('/api/playlists/:id/songs/:songId',      withAuth, patchPlaylistSong);
 router.patch('/api/playlists/:id/lock',               withAuth, lockPlaylist);
 router.get('/api/playlists/:id/submissions',          withAuth, listSubmissions);
