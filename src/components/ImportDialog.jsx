@@ -120,14 +120,19 @@ function AddSongTab({ onClose, onComplete }) {
     setSaving(true);
     setError('');
     try {
+      const title  = form.title.trim();
+      const artist = form.artist.trim();
+      const autoChordUrl = form.chords_url.trim() ||
+        `https://www.google.com/search?q=${encodeURIComponent(title)}+${encodeURIComponent(artist)}+chords`;
+
       if (isPublic) {
         // Public: add to global marketplace + user library
         const body = {
-          title:       form.title.trim(),
-          artist:      form.artist.trim(),
+          title,
+          artist,
           default_key: form.key    || undefined,
           default_bpm: form.bpm   ? Number(form.bpm) : undefined,
-          chords_url:  form.chords_url.trim() || undefined,
+          chords_url:  autoChordUrl,
           genre:       [...genres],
           tags:        [],
         };
@@ -136,11 +141,11 @@ function AddSongTab({ onClose, onComplete }) {
       } else {
         // Private: add only to user library (not marketplace)
         await createPrivateSong({
-          title:      form.title.trim(),
-          artist:     form.artist.trim(),
+          title,
+          artist,
           key:        form.key || undefined,
           bpm:        form.bpm ? Number(form.bpm) : undefined,
-          chords_url: form.chords_url.trim() || undefined,
+          chords_url: autoChordUrl,
           notes:      form.notes.trim() || undefined,
           genre:      [...genres],
           tags:       [],
@@ -490,23 +495,19 @@ function SpotifyTab({ onClose, onComplete }) {
               key={r.spotify_id}
               className={`sp-result${selected.has(r.spotify_id) ? ' selected' : ''}`}
             >
+              {r.image_url && (
+                <img src={r.image_url} alt="" style={{ width: 40, height: 40, objectFit: 'cover', flexShrink: 0 }} />
+              )}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 600, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.title}</div>
+                <div style={{ fontSize: 11, color: '#888' }}>{r.artist}</div>
+              </div>
               <input
                 type="checkbox"
                 checked={selected.has(r.spotify_id)}
                 onChange={() => toggleSelect(r.spotify_id)}
-                style={{ flexShrink: 0 }}
+                style={{ flexShrink: 0, cursor: 'pointer', width: 16, height: 16 }}
               />
-              {r.image_url && (
-                <img src={r.image_url} alt="" style={{ width: 36, height: 36, objectFit: 'cover', flexShrink: 0 }} />
-              )}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 600, fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.title}</div>
-                <div style={{ fontSize: 10, color: '#666' }}>{r.artist}</div>
-              </div>
-              <div style={{ fontSize: 10, color: '#888', textAlign: 'right', flexShrink: 0 }}>
-                {r.key && <div>{r.key}</div>}
-                {r.bpm && <div>{r.bpm} BPM</div>}
-              </div>
             </label>
           ))}
         </div>
