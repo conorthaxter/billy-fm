@@ -9,6 +9,13 @@ export const deletePlaylist   = (id)          => del(`/api/playlists/${id}`);
 /** Full replace of songs in a playlist. songs = [{ song_id, position, notes? }] */
 export const setPlaylistSongs = (id, songs)   => put(`/api/playlists/${id}/songs`, { songs });
 
+/** Lock or unlock a client set */
+export const lockPlaylist = (id, locked) =>
+  patch(`/api/playlists/${id}/lock`, { locked });
+
+/** Fetch off-list requests for a playlist */
+export const getPlaylistRequests = (id) => get(`/api/playlists/${id}/requests`);
+
 /** Add one song to end of playlist */
 export const addPlaylistSong = (id, song_id) =>
   post(`/api/playlists/${id}/songs`, { song_id });

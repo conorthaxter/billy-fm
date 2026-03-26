@@ -9,6 +9,8 @@ import {
   setPlaylistSongs,
   addPlaylistSong,
   removePlaylistSong,
+  lockPlaylist,
+  getPlaylistRequests,
 } from '../api/playlists';
 import { getLibrary } from '../api/library';
 import { getTransitions, createTransition } from '../api/transitions';
@@ -145,6 +147,11 @@ export default function PlaylistDetailPage() {
   const [notif,        setNotif]        = useState('');
   const notifTimer = useRef(null);
 
+  // Client set state
+  const [csLocked,     setCsLocked]     = useState(null); // null until playlist loaded
+  const [csRequests,   setCsRequests]   = useState(null); // null = not loaded yet
+  const [csReqLoading, setCsReqLoading] = useState(false);
+
   // Add Songs state
   const [addMode,      setAddMode]      = useState(null); // null | 'search' | 'browse'
   const [searchQuery,  setSearchQuery]  = useState('');
@@ -197,6 +204,7 @@ export default function PlaylistDetailPage() {
       .then(data => {
         setPlaylist(data);
         setSongs(data.songs ?? []);
+        setCsLocked(!!data.is_locked);
         setLoading(false);
       })
       .catch(err => {
@@ -204,6 +212,15 @@ export default function PlaylistDetailPage() {
         setLoading(false);
       });
   }, [id]);
+
+  // Load special requests when it's a client set
+  useEffect(() => {
+    if (!playlist || playlist.playlist_type !== 'client_set') return;
+    setCsReqLoading(true);
+    getPlaylistRequests(id)
+      .then(data => { setCsRequests(data ?? []); setCsReqLoading(false); })
+      .catch(() => { setCsRequests([]); setCsReqLoading(false); });
+  }, [id, playlist?.playlist_type]); // eslint-disable-line
 
   // Load transitions
   useEffect(() => {
@@ -288,6 +305,20 @@ export default function PlaylistDetailPage() {
       ctx.addToQueue({ song_id: s.song_id, title: s.title, artist: s.artist, key: s.key, bpm: s.bpm });
     }
     notify(`${songs.length} songs added to queue`);
+  }
+
+  // ── Client set: lock/unlock ─────────────────────────────────────────────────
+
+  async function handleLockToggle() {
+    const newLocked = !csLocked;
+    try {
+      await lockPlaylist(id, newLocked);
+      setCsLocked(newLocked);
+      setPlaylist(p => ({ ...p, is_locked: newLocked ? 1 : 0 }));
+      notify(newLocked ? 'Client set locked' : 'Client set unlocked');
+    } catch (err) {
+      notify(err.message || 'Failed to update lock');
+    }
   }
 
   // ── Delete song from playlist ───────────────────────────────────────────────
@@ -592,6 +623,62 @@ export default function PlaylistDetailPage() {
               </Droppable>
             </DragDropContext>
           </>
+        )}
+        {/* Client set panel */}
+        {playlist.playlist_type === 'client_set' && (
+          <div className="pl-cs-panel">
+            {/* Lock/unlock toggle */}
+            <div className="pl-cs-section">
+              <div className="pl-cs-section-title">Client Access</div>
+              <div className="pl-cs-lock-row">
+                <button className={`nb pl-cs-lock-btn${csLocked ? ' locked' : ''}`} onClick={handleLockToggle}>
+                  {csLocked ? '🔒 Locked' : '🔓 Unlocked'}
+                </button>
+                <span className="pl-cs-lock-hint">
+                  {csLocked ? 'Client cannot edit' : 'Client can edit'}
+                </span>
+              </div>
+            </div>
+
+            {/* Metadata */}
+            <div className="pl-cs-section">
+              <div className="pl-cs-section-title">Set Info</div>
+              <div className="pl-cs-meta-grid">
+                {playlist.client_name && <><span className="pl-cs-meta-label">Client</span><span>{playlist.client_name}</span></>}
+                {playlist.event_date  && <><span className="pl-cs-meta-label">Date</span><span>{playlist.event_date}</span></>}
+                {playlist.color_scheme && <><span className="pl-cs-meta-label">Theme</span><span>{playlist.color_scheme}</span></>}
+                {playlist.source_gig_id && <><span className="pl-cs-meta-label">Gig ID</span><span className="pl-cs-meta-mono">{playlist.source_gig_id}</span></>}
+                {playlist.share_slug && <><span className="pl-cs-meta-label">Slug</span><span className="pl-cs-meta-mono">{playlist.share_slug}</span></>}
+                {(() => {
+                  try {
+                    const m = JSON.parse(playlist.metadata || '{}');
+                    return (
+                      <>
+                        {m.gig_type    && <><span className="pl-cs-meta-label">Gig type</span><span>{m.gig_type}</span></>}
+                        {m.venue       && <><span className="pl-cs-meta-label">Venue</span><span>{m.venue}</span></>}
+                        {m.portal_slug && <><span className="pl-cs-meta-label">Portal</span><span className="pl-cs-meta-mono">{m.portal_slug}</span></>}
+                      </>
+                    );
+                  } catch { return null; }
+                })()}
+              </div>
+            </div>
+
+            {/* Special requests */}
+            <div className="pl-cs-section">
+              <div className="pl-cs-section-title">Special Requests</div>
+              {csReqLoading && <p className="pl-cs-empty">Loading…</p>}
+              {!csReqLoading && csRequests !== null && csRequests.length === 0 && (
+                <p className="pl-cs-empty">No special requests yet.</p>
+              )}
+              {!csReqLoading && csRequests?.map(r => (
+                <div key={r.id} className="pl-cs-req-card">
+                  <div className="pl-cs-req-text">{r.request_text}</div>
+                  {r.requester_note && <div className="pl-cs-req-note">{r.requester_note}</div>}
+                </div>
+              ))}
+            </div>
+          </div>
         )}
       </div>
 

@@ -33,6 +33,7 @@ import {
   patchPlaylistSong,
   lockPlaylist,
   listSubmissions,
+  listPlaylistRequests,
 } from './routes/playlists';
 import {
   verifyClientSet,
@@ -139,6 +140,7 @@ router.post('/api/playlists/:id/songs',               withAuth, addPlaylistSong)
 router.delete('/api/playlists/:id/songs/:songId',     withAuth, removePlaylistSong);
 router.patch('/api/playlists/:id/songs/:songId',      withAuth, patchPlaylistSong);
 router.patch('/api/playlists/:id/lock',               withAuth, lockPlaylist);
+router.get('/api/playlists/:id/requests',             withAuth, listPlaylistRequests);
 router.get('/api/playlists/:id/submissions',          withAuth, listSubmissions);
 
 // ---------------------------------------------------------------------------

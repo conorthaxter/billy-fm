@@ -354,6 +354,28 @@ export async function lockPlaylist(request: AuthRequest, env: Env): Promise<Resp
 }
 
 // ---------------------------------------------------------------------------
+// GET /api/playlists/:id/requests — off-list requests submitted by client
+// ---------------------------------------------------------------------------
+
+export async function listPlaylistRequests(request: AuthRequest, env: Env): Promise<Response> {
+  const { id } = request.params as { id: string };
+
+  const check = await assertOwner(env, id, request.user!.id);
+  if (check instanceof Response) return check;
+
+  const rows = await env.DB.prepare(
+    `SELECT id, request_text, requester_note, created_at
+     FROM off_list_requests
+     WHERE playlist_id = ?
+     ORDER BY created_at ASC`,
+  )
+    .bind(id)
+    .all<Record<string, unknown>>();
+
+  return json(rows.results ?? []);
+}
+
+// ---------------------------------------------------------------------------
 // GET /api/playlists/:id/submissions — list set submissions (artist only)
 // ---------------------------------------------------------------------------
 
