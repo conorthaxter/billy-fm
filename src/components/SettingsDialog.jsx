@@ -26,7 +26,6 @@ const BG_OPTIONS = [
   { id: 'white',  label: 'White',  swatch: '#ffffff', border: '#ddd' },
   { id: 'cream',  label: 'Cream',  swatch: '#f5f3ef', border: '#ccc' },
   { id: 'dark',   label: 'Dark',   swatch: '#111111', border: '#555' },
-  { id: 'black',  label: 'Black',  swatch: '#000000', border: '#555' },
 ];
 
 function PaletteSquares({ paletteId }) {

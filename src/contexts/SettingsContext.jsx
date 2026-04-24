@@ -11,11 +11,10 @@ const LS = {
 // 'white'  → (no class)
 // 'cream'  → body.cream
 // 'dark'   → body.dark
-// 'black'  → body.dark body.black
 function applyBg(bg) {
-  document.body.classList.toggle('cream',  bg === 'cream');
-  document.body.classList.toggle('dark',   bg === 'dark' || bg === 'black');
-  document.body.classList.toggle('black',  bg === 'black');
+  document.body.classList.toggle('cream', bg === 'cream');
+  document.body.classList.toggle('dark',  bg === 'dark');
+  document.body.classList.remove('black');
 }
 
 export function SettingsProvider({ children }) {
@@ -25,7 +24,10 @@ export function SettingsProvider({ children }) {
     const legacy = { summer: 'festival', spring: 'session', autumn: 'cafe', winter: 'jazzbar' };
     return (stored && legacy[stored]) ? legacy[stored] : (stored || 'festival');
   });
-  const [bg,             setBgState]             = useState(() => LS.get('bfm_bg')             || 'white');
+  const [bg,             setBgState]             = useState(() => {
+    const stored = LS.get('bfm_bg') || 'white';
+    return stored === 'black' ? 'dark' : stored;
+  });
   const [defaultSort,    setDefaultSortState]    = useState(() => LS.get('bfm_default_sort')   || 'random');
   const [defaultPublic,  setDefaultPublicState]  = useState(() => LS.get('bfm_default_public') || false);
 
@@ -54,10 +56,10 @@ export function SettingsProvider({ children }) {
 
   const setBg = useCallback(b => setBgState(b), []);
 
-  // Cycle bg: white → cream → dark → black → white
+  // Cycle bg: white → cream → dark → white
   const cycleBg = useCallback(() => {
     setBgState(prev => {
-      const order = ['white', 'cream', 'dark', 'black'];
+      const order = ['white', 'cream', 'dark'];
       const idx = order.indexOf(prev);
       return order[(idx + 1) % order.length];
     });

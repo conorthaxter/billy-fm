@@ -20,6 +20,7 @@ import {
   patchLibraryEntry,
   removeFromLibrary,
   createPrivateSong,
+  importAllSongs,
 } from './routes/library';
 import {
   listPlaylists,
@@ -121,6 +122,7 @@ router.patch('/api/songs/:id',   withAuth, patchSong);
 // ---------------------------------------------------------------------------
 
 router.get('/api/library',              withAuth, getLibrary);
+router.post('/api/library/import-all', withAuth, importAllSongs);
 router.post('/api/library/private',    withAuth, createPrivateSong);
 router.post('/api/library/:songId',    withAuth, addToLibrary);
 router.patch('/api/library/:songId',   withAuth, patchLibraryEntry);

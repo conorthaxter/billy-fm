@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { getLibrary, updateLibraryEntry } from '../api/library';
+import { getLibrary, updateLibraryEntry, removeFromLibrary, importAllSongs } from '../api/library';
 import { createPlaylist, listPlaylists, setPlaylistSongs, getPlaylist, updatePlaylist, deletePlaylist } from '../api/playlists';
 import { getTransitions, createTransition as apiCreateTransition } from '../api/transitions';
 import { enrichSongs, getFirstWord } from '../utils/enrichment';
@@ -91,6 +91,35 @@ function NameInputDialog({ defaultValue, onConfirm, onCancel }) {
   );
 }
 
+// ─── Default import prompt (shown inline when library is empty) ───────────────
+
+function DefaultImportPrompt({ onYes, onNo, importing }) {
+  return (
+    <div style={{ padding: '60px 20px', textAlign: 'center', maxWidth: 420, margin: '0 auto' }}>
+      <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 10 }}>Import default songbook?</div>
+      <div style={{ fontSize: 13, color: '#666', marginBottom: 28, lineHeight: 1.6 }}>
+        Your library is empty. Import all songs from the public songbook to get started quickly.
+      </div>
+      <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+        <button
+          onClick={onYes}
+          disabled={importing}
+          style={{ fontFamily: 'var(--font)', fontSize: 12, fontWeight: 700, border: '1px solid #000', background: '#000', color: '#fff', padding: '10px 28px', cursor: importing ? 'wait' : 'pointer', opacity: importing ? 0.6 : 1 }}
+        >
+          {importing ? 'Importing…' : 'Yes, import'}
+        </button>
+        <button
+          onClick={onNo}
+          disabled={importing}
+          style={{ fontFamily: 'var(--font)', fontSize: 12, border: '1px solid #ccc', background: '#fff', color: '#000', padding: '10px 28px', cursor: 'pointer' }}
+        >
+          No thanks
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const FILTER_LABELS = { key:'Key', bpm:'BPM±15', theme:'Theme', era:'Era', artist:'Artist', genre:'Genre', unplayed:'!Recent', frequent:'Frequent' };
@@ -132,8 +161,9 @@ export default function DashboardPage() {
   // Key filter (grid control row) — single key or null
   const [keyFilter,   setKeyFilter]   = useState(null);
 
-  // Grid cursor song (set by SongGrid arrow navigation)
-  const [cursorSong,  setCursorSong]  = useState(null);
+  // Grid cursor song (set by SongGrid arrow navigation or 1.5s hover snap)
+  const [cursorSong,        setCursorSong]        = useState(null);
+  const [cursorIsKeyboard,  setCursorIsKeyboard]  = useState(false);
 
   // Tile zoom (persisted to localStorage)
   const [tileZoom, setTileZoom] = useState(() => {
@@ -150,6 +180,8 @@ export default function DashboardPage() {
   const [centerTab,       setCenterTab]       = useState('library');
   const [ppCollapsed,     setPpCollapsed]     = useState(false);
   const [importOpen,      setImportOpen]      = useState(false);
+  const [importDefaultDismissed, setImportDefaultDismissed] = useState(false);
+  const [importingDefault, setImportingDefault] = useState(false);
   const [newSetNameOpen,  setNewSetNameOpen]  = useState(false);
   const [linkingMode,  setLinkingMode]  = useState(false);
   const [suggestions,  setSuggestions]  = useState([]);
@@ -229,6 +261,23 @@ export default function DashboardPage() {
     return () => document.body.classList.remove('enriching');
   }, [enrichStatus]);
 
+  // ── Warn before leaving if there's an unsaved set ────────────────────────
+
+  useEffect(() => {
+    const hasUnsavedSet = !!(nowPlaying || queue.length ||
+      (session && playHistory.some(e => e.timestamp >= (session?.startTime || 0))));
+
+    function handleBeforeUnload(e) {
+      if (hasUnsavedSet) {
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+      }
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [nowPlaying, queue.length, session, playHistory]); // eslint-disable-line
+
   // ── Keyboard shortcuts ────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -243,13 +292,15 @@ export default function DashboardPage() {
 
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) return;
 
-      // ENTER — select cursor song or play already-selected
+      // ENTER — select cursor song (keyboard nav only) or play already-selected
       if (e.key === 'Enter' && !searchOpen) {
         e.preventDefault();
-        if (cursorSong && cursorSong.song_id !== selectedSong?.song_id) {
+        if (cursorIsKeyboard && cursorSong && cursorSong.song_id !== selectedSong?.song_id) {
           selectSong(cursorSong);
         } else if (selectedSong) {
           playSong(selectedSong);
+        } else if (cursorSong) {
+          selectSong(cursorSong);
         }
         return;
       }
@@ -323,11 +374,26 @@ export default function DashboardPage() {
       if ((e.key === 'k' && (e.metaKey || e.ctrlKey)) || e.key === '/') {
         e.preventDefault();
         setSearchOpen(true);
+        return;
+      }
+
+      // ⌘+- / ⌘+= — zoom tiles
+      if (e.metaKey || e.ctrlKey) {
+        if (e.key === '-' || e.key === '_') {
+          e.preventDefault();
+          handleZoomChange(tileZoom - 0.1);
+          return;
+        }
+        if (e.key === '=' || e.key === '+') {
+          e.preventDefault();
+          handleZoomChange(tileZoom + 0.1);
+          return;
+        }
       }
     }
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [dlg, searchOpen, nowPlaying, selectedSong, cursorSong, queue]); // eslint-disable-line
+  }, [dlg, searchOpen, nowPlaying, selectedSong, cursorSong, queue, tileZoom]); // eslint-disable-line
 
   // ── Computed faded IDs ────────────────────────────────────────────────────
 
@@ -653,6 +719,32 @@ export default function DashboardPage() {
     } catch { /* silent */ }
   }
 
+  async function handleDeleteSong(song) {
+    if (!confirm(`Remove "${song.title}" from your library?`)) return;
+    try {
+      await removeFromLibrary(song.song_id);
+      setSongs(prev => prev.filter(s => s.song_id !== song.song_id));
+      if (selectedSong?.song_id === song.song_id) clearSelectedSong();
+      if (nowPlaying?.song_id === song.song_id) ctx.clearNP();
+      notify(`"${song.title}" removed from library`);
+    } catch (err) {
+      notify(err.message || 'Failed to remove song');
+    }
+  }
+
+  async function handleImportDefault() {
+    setImportingDefault(true);
+    try {
+      await importAllSongs();
+      setImportDefaultDismissed(true);
+      setLoadTrigger(t => t + 1);
+      notify('Library imported!');
+    } catch {
+      notify('Import failed');
+    }
+    setImportingDefault(false);
+  }
+
   function handleSortChange(v) {
     setSortBy(v);
     if (v === 'random') setShuffleOrder(shuffle(songs.map(s => s.song_id)));
@@ -710,7 +802,7 @@ export default function DashboardPage() {
         searchQuery={searchQuery}
         onSearch={setSearchQuery}
         onClose={closeSearch}
-        onSelectSong={song => { selectSong(song); closeSearch(); }}
+        onSelectSong={song => { selectSong(song); setCursorSong(song); closeSearch(); }}
         onPlaySong={song => { playSong(song); closeSearch(); }}
         onAddToQueue={addToQueue}
       />
@@ -737,6 +829,7 @@ export default function DashboardPage() {
         onSaveChordsUrl={saveChordsUrl}
         onTogglePublic={togglePublic}
         onEditSong={editSong}
+        onDeleteSong={handleDeleteSong}
         onStartLinking={() => setLinkingMode(l => !l)}
         linkingMode={linkingMode}
         onSelectSong={selectSong}
@@ -765,33 +858,41 @@ export default function DashboardPage() {
         </div>
 
         {centerTab === 'library' && (
-          <SongGrid
-            songs={songs}
-            nowPlaying={nowPlaying}
-            selectedSong={selectedSong}
-            fadedIds={keyFilteredResult}
-            sortBy={sortBy}
-            shuffleOrder={shuffleOrder}
-            playHistory={playHistory}
-            onSortChange={handleSortChange}
-            onReshuffle={handleReshuffle}
-            onSelectSong={selectSong}
-            onPlaySong={playSong}
-            multiSelected={new Set(multiSelected.map(s => s.song_id))}
-            onClearMultiSelect={() => setMultiSelected([])}
-            onAddToQueue={addToQueue}
-            onDeselect={clearSelectedSong}
-            loading={loading}
-            error={loadError}
-            keyFilter={keyFilter}
-            onKeyFilterToggle={k => setKeyFilter(prev => prev === k ? null : k)}
-            onKeyFilterClear={() => setKeyFilter(null)}
-            onCursorChange={setCursorSong}
-            tileZoom={tileZoom}
-            onZoomChange={handleZoomChange}
-            onSearchOpen={() => setSearchOpen(true)}
-            onImportOpen={() => setImportOpen(true)}
-          />
+          !loading && songs.length === 0 && !importDefaultDismissed ? (
+            <DefaultImportPrompt
+              onYes={handleImportDefault}
+              onNo={() => setImportDefaultDismissed(true)}
+              importing={importingDefault}
+            />
+          ) : (
+            <SongGrid
+              songs={songs}
+              nowPlaying={nowPlaying}
+              selectedSong={selectedSong}
+              fadedIds={keyFilteredResult}
+              sortBy={sortBy}
+              shuffleOrder={shuffleOrder}
+              playHistory={playHistory}
+              onSortChange={handleSortChange}
+              onReshuffle={handleReshuffle}
+              onSelectSong={selectSong}
+              onPlaySong={playSong}
+              multiSelected={new Set(multiSelected.map(s => s.song_id))}
+              onClearMultiSelect={() => setMultiSelected([])}
+              onAddToQueue={addToQueue}
+              onDeselect={clearSelectedSong}
+              loading={loading}
+              error={loadError}
+              keyFilter={keyFilter}
+              onKeyFilterToggle={k => setKeyFilter(prev => prev === k ? null : k)}
+              onKeyFilterClear={() => setKeyFilter(null)}
+              onCursorChange={(song, isKb) => { setCursorSong(song); setCursorIsKeyboard(!!isKb); }}
+              tileZoom={tileZoom}
+              onZoomChange={handleZoomChange}
+              onSearchOpen={() => setSearchOpen(true)}
+              onImportOpen={() => setImportOpen(true)}
+            />
+          )
         )}
 
         {centerTab === 'playlists' && (

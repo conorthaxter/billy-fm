@@ -39,19 +39,8 @@ body.cream .mp-main       { background: #f5f3ef; }
 body.cream .mp-toolbar    { background: #f5f3ef; }
 body.cream .grid-area     { background: #f5f3ef; }
 
-/* Dive palette mode — only affects tile palette colors, not background.
-   Background/dark mode is controlled independently via body.dark / body.black. */
-
-/* Black = dark but with true black backgrounds */
 body.dark  { --bg: #111; --border: #2a2a2a; }
 body.cream { --bg: #f5f3ef; }
-body.dark.black           { background: #000; }
-body.dark.black .nav      { background: #000; border-color: #1a1a1a; }
-body.dark.black .filter-panel { background: #030303; border-color: #1a1a1a; }
-body.dark.black .right-panel  { background: #030303; border-color: #1a1a1a; }
-body.dark.black .mp-sidebar   { background: #030303; border-color: #1a1a1a; }
-body.dark.black .mp-main      { background: #000; }
-body.dark.black .mp-toolbar   { background: #000; border-color: #1a1a1a; }
 
 /* ============================================================
    SHARED BUTTON PRIMITIVES
@@ -2120,14 +2109,13 @@ body.dark .enrich-bar { background: #ddd; }
 }
 .mp-add-btn:hover { background: #000; color: #fff; }
 
-/* Grid */
+/* Grid — matches song-grid layout */
 .mp-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 3px;
   padding: 14px;
   align-content: flex-start;
-  flex: 1;
 }
 .mp-load-more {
   padding: 14px;
@@ -2152,29 +2140,30 @@ body.dark .enrich-bar { background: #ddd; }
 
 /* Cards */
 .mc {
-  width: 168px;
+  width: 100%;
   border: 1px solid rgba(0,0,0,.25);
   display: flex;
   flex-direction: column;
   position: relative;
   overflow: hidden;
   cursor: default;
-  flex-shrink: 0;
 }
-.mc-in-lib-banner {
+.mc.mc-selected {
+  outline: 2px solid #000;
+  outline-offset: -2px;
+}
+/* Small ✓ corner badge for songs already in library */
+.mc-in-lib {
   position: absolute;
-  top: 0; left: 0; right: 0;
-  font-size: 8px;
+  top: 4px;
+  right: 5px;
+  font-size: 10px;
   font-weight: bold;
-  letter-spacing: .06em;
-  text-align: center;
-  padding: 2px 0;
-  background: rgba(0,0,0,.18);
-  color: inherit;
-  text-transform: uppercase;
+  line-height: 1;
+  pointer-events: none;
 }
 .mc-body {
-  padding: 20px 8px 6px;
+  padding: 8px 8px 6px;
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -2478,6 +2467,18 @@ body.dark .fp-visibility-btn         { border-color: #333; color: #555; }
 body.dark .fp-visibility-btn:hover   { border-color: #666; color: #aaa; }
 body.dark .fp-visibility-btn.public  { border-color: #388e3c; color: #81c784; }
 body.dark .fp-visibility-btn.public:hover { background: #1b2e1c; }
+
+/* ── Delete from library button ─────────────────────────────────────────── */
+.fp-delete-btn {
+  width: 100%;
+  font-size: 10px;
+  color: #999;
+  border-color: #ddd;
+  padding: 3px 8px;
+}
+.fp-delete-btn:hover { background: #fee; color: #c00; border-color: #c00; }
+body.dark .fp-delete-btn { color: #555; border-color: #333; background: transparent; }
+body.dark .fp-delete-btn:hover { background: #1a0000; color: #ff6b6b; border-color: #c00; }
 
 /* ── Spotify search results ──────────────────────────────────────────────── */
 .sp-result {

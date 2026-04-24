@@ -16,7 +16,7 @@ migrations_dir = "migrations"
 FRONTEND_ORIGIN = "https://billy-fm.pages.dev"
 GOOGLE_REDIRECT_URI = "https://billy-fm-worker.conorthaxter.workers.dev/auth/google/callback"
 GOOGLE_CLIENT_ID = "404273759146-64g116fa86s8lm82oq3u8depdro22pds.apps.googleusercontent.com"
-ENABLE_CLIENT_SETS = "false"
+ENABLE_CLIENT_SETS = "true"
 ARTIST_EMAIL = "conorthaxter@gmail.com"
 
 [triggers]

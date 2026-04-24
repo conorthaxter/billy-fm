@@ -56,6 +56,9 @@ function HowToModal({ onClose }) {
               <div className="hk-row"><kbd>E</kbd><span>toggle era filter</span></div>
               <div className="hk-row"><kbd>A</kbd><span>toggle artist filter</span></div>
               <div className="hk-row"><kbd>G</kbd><span>toggle genre filter</span></div>
+              <div className="hk-row"><kbd>L</kbd><span>toggle transition linking mode</span></div>
+              <div className="hk-row"><kbd>⌘−</kbd><span>zoom tiles out</span></div>
+              <div className="hk-row"><kbd>⌘+</kbd><span>zoom tiles in</span></div>
             </div>
           </div>
 

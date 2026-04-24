@@ -148,7 +148,13 @@ function PlaylistDetail({
             return (
               <div
                 key={song.song_id}
-                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 4px', borderBottom: '1px solid #f0f0f0', cursor: 'pointer', background: isMultiSel ? '#f0f4ff' : '', position: 'relative' }}
+                draggable
+                onDragStart={e => {
+                  e.dataTransfer.setData('application/x-song', JSON.stringify(s));
+                  e.dataTransfer.setData('application/x-source', 'playlist');
+                  e.dataTransfer.effectAllowed = 'copy';
+                }}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 4px', borderBottom: '1px solid #f0f0f0', cursor: 'grab', background: isMultiSel ? '#f0f4ff' : '', position: 'relative' }}
                 onClick={e => onSongClick?.(s, e.shiftKey || e.ctrlKey || e.metaKey)}
                 onDoubleClick={e => { e.preventDefault(); onSongDblClick?.(s); }}
                 onMouseEnter={e => { if (!isMultiSel) e.currentTarget.style.background = '#fafafa'; }}

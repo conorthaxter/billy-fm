@@ -34,7 +34,7 @@ export default function SongGrid({
   onImportOpen,
 }) {
   const { palette } = useSettings();
-  const sorted = getSorted(songs, sortBy, shuffleOrder, playHistory);
+  const sorted = getSorted(songs, sortBy, shuffleOrder);
   const anyFiltersActive = fadedIds instanceof Set
     ? fadedIds.size > 0
     : !!(fadedIds?.faded?.size);
@@ -57,7 +57,9 @@ export default function SongGrid({
   const displayRef = useRef(display);
   displayRef.current = display;
 
-  // Mouse movement → exit keyboard mode, hide visual cursor
+  const snapTimerRef = useRef(null);
+
+  // Mouse movement → exit keyboard mode immediately
   useEffect(() => {
     function onMouseMove() {
       setKbVisible(false);
@@ -67,12 +69,24 @@ export default function SongGrid({
     return () => document.removeEventListener('mousemove', onMouseMove);
   }, []);
 
+  // After hovering on the same tile for 1.5s, snap keyboard cursor there
+  useEffect(() => {
+    clearTimeout(snapTimerRef.current);
+    if (hoverIdx === null) return;
+    snapTimerRef.current = setTimeout(() => {
+      setKbIdx(hoverIdx);
+      setKbVisible(true);
+      setKeyboardMode(true);
+    }, 1500);
+    return () => clearTimeout(snapTimerRef.current);
+  }, [hoverIdx]); // eslint-disable-line
+
   // Notify parent of the "active" cursor song
   // In keyboard mode: kbIdx controls; otherwise hoverIdx controls
   useEffect(() => {
     const idx = keyboardMode ? kbIdx : hoverIdx;
     const song = idx !== null ? display[idx] : null;
-    onCursorChange?.(song ?? null);
+    onCursorChange?.(song ?? null, keyboardMode);
   }, [kbIdx, hoverIdx, keyboardMode]); // eslint-disable-line
 
   // Reset cursors when display changes significantly
@@ -171,7 +185,6 @@ export default function SongGrid({
           <option value="key">Key</option>
           <option value="bpm">BPM</option>
           <option value="era">Era</option>
-          <option value="theme-proximity">Theme Proximity</option>
           <option value="most-played">Most Played</option>
           <option value="least-played">Least Played</option>
         </select>

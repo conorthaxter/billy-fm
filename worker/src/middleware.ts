@@ -44,8 +44,10 @@ function getAllowedOrigins(env: Env): string[] {
   return [
     env.FRONTEND_ORIGIN,
     'https://billy-book.pages.dev',
+    'https://conor.bio',
     'http://localhost:5173',
     'http://localhost:4173',
+    'http://localhost:8787',
   ].filter(Boolean);
 }
 

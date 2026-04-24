@@ -21,7 +21,15 @@ export function PlayStateProvider({ children }) {
   const [playHistory,  setPlayHistory]  = useState(() => LS.get('bfm_history') || []);
   const [session,      setSession]      = useState(() => {
     const s = LS.get('bfm_session');
-    return s || { id: Date.now() + '', title: sessionDateTitle(), startTime: Date.now(), notes: '' };
+    if (!s) return { id: Date.now() + '', title: sessionDateTitle(), startTime: Date.now(), notes: '' };
+    // If the saved title is a date string from a previous calendar day, refresh it to today
+    const today = sessionDateTitle();
+    const savedDate = new Date(s.startTime || 0).toDateString();
+    const nowDate   = new Date().toDateString();
+    if (savedDate !== nowDate && s.title !== today) {
+      return { ...s, title: today };
+    }
+    return s;
   });
 
   // Dashboard-provided extras (suggestions, complex handlers)

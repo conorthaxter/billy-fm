@@ -33,16 +33,17 @@ function useDebounce(value, delay) {
 
 // ─── Marketplace card ─────────────────────────────────────────────────────────
 
-function MarketplaceCard({ song, inLibrary, adding, onAdd }) {
+function MarketplaceCard({ song, inLibrary, adding, selected, onAdd, onToggleSelect }) {
   const { palette } = useSettings();
   const [bg, fg] = keyColor(song.default_key, palette);
-  const isSearchUrl = (u) => (u || '').includes('google.com/search');
 
   return (
-    <div className="mc" style={{ background: bg, color: fg }}>
-      {inLibrary && (
-        <div className="mc-in-lib">✓ IN LIBRARY</div>
-      )}
+    <div
+      className={`mc${selected ? ' mc-selected' : ''}`}
+      style={{ background: bg, color: fg }}
+      onClick={e => { if (e.shiftKey) onToggleSelect?.(e); }}
+    >
+      {inLibrary && <span className="mc-in-lib">✓</span>}
       <div className="mc-body">
         <div className="mc-title">{song.title}</div>
         <div className="mc-artist">{song.artist}</div>
@@ -65,9 +66,7 @@ function MarketplaceCard({ song, inLibrary, adding, onAdd }) {
           <span className="mc-count">
             {song.library_count || 0} performer{song.library_count !== 1 ? 's' : ''}
           </span>
-          {inLibrary ? (
-            <span className="mc-added">✓ added</span>
-          ) : (
+          {!inLibrary && (
             <button
               className="mc-add"
               disabled={adding}
@@ -318,6 +317,10 @@ export default function MarketplacePage() {
   const [libraryIds, setLibraryIds] = useState(new Set());
   const [adding,     setAdding]     = useState(new Set()); // song ids currently being POSTed
 
+  // Multi-select
+  const [mpSelected,  setMpSelected]  = useState(new Set());
+  const [bulkAdding,  setBulkAdding]  = useState(false);
+
   // Modal
   const [addSongOpen, setAddSongOpen] = useState(false);
 
@@ -408,6 +411,35 @@ export default function MarketplacePage() {
     }
   }
 
+  // ── Multi-select / bulk add ───────────────────────────────────────────────
+
+  function handleToggleSelect(e, song) {
+    if (libraryIds.has(song.id)) return;
+    setMpSelected(prev => {
+      const n = new Set(prev);
+      n.has(song.id) ? n.delete(song.id) : n.add(song.id);
+      return n;
+    });
+  }
+
+  async function handleBulkAdd() {
+    const ids = [...mpSelected];
+    setBulkAdding(true);
+    for (const id of ids) {
+      try {
+        await addToLibrary(id);
+        setLibraryIds(prev => new Set(prev).add(id));
+      } catch {
+        setLibraryIds(prev => new Set(prev).add(id));
+      }
+    }
+    setSongs(prev => prev.map(s =>
+      mpSelected.has(s.id) ? { ...s, library_count: (s.library_count || 0) + 1 } : s
+    ));
+    setMpSelected(new Set());
+    setBulkAdding(false);
+  }
+
   // ── Filter toggles ────────────────────────────────────────────────────────
 
   function toggleGenre(g) {
@@ -488,6 +520,11 @@ export default function MarketplacePage() {
               <option value="bpm">By BPM</option>
             </select>
           </div>
+          {mpSelected.size > 0 && (
+            <button className="nb accent" onClick={handleBulkAdd} disabled={bulkAdding}>
+              {bulkAdding ? 'Adding…' : `Add ${mpSelected.size} to Library`}
+            </button>
+          )}
           <button className="nb accent" onClick={() => setAddSongOpen(true)}>+ ADD NEW SONG</button>
         </div>
 
@@ -515,7 +552,9 @@ export default function MarketplacePage() {
                 song={song}
                 inLibrary={libraryIds.has(song.id)}
                 adding={adding.has(song.id)}
+                selected={mpSelected.has(song.id)}
                 onAdd={() => handleAdd(song)}
+                onToggleSelect={e => handleToggleSelect(e, song)}
               />
             ))}
           </div>

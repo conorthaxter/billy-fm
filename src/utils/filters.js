@@ -21,32 +21,8 @@ export function shuffle(arr) {
   return a;
 }
 
-function tagOverlap(a, b) {
-  const ta = new Set([...(a.tags || []), ...(a.genre || [])]);
-  const tb = new Set([...(b.tags || []), ...(b.genre || [])]);
-  let n = 0; for (const t of ta) if (tb.has(t)) n++;
-  return n;
-}
-
-function proximitySort(songs) {
-  if (songs.length <= 1) return songs;
-  const result = [songs[0]];
-  const rem = songs.slice(1);
-  while (rem.length) {
-    const last = result[result.length - 1];
-    let bi = 0, bs = -1;
-    for (let i = 0; i < rem.length; i++) {
-      const sc = tagOverlap(last, rem[i]);
-      if (sc > bs) { bs = sc; bi = i; }
-    }
-    result.push(rem.splice(bi, 1)[0]);
-  }
-  return result;
-}
-
-export function getSorted(songs, sortBy, shuffleOrder, playHistory) {
+export function getSorted(songs, sortBy, shuffleOrder) {
   const arr = [...songs];
-  const countOf = id => (playHistory || []).filter(e => e.songId === id).length;
   switch (sortBy) {
     case 'random':
       return arr.sort((a, b) => shuffleOrder.indexOf(a.song_id) - shuffleOrder.indexOf(b.song_id));
@@ -60,12 +36,10 @@ export function getSorted(songs, sortBy, shuffleOrder, playHistory) {
       return arr.sort((a, b) => (a.bpm || 0) - (b.bpm || 0));
     case 'era':
       return arr.sort((a, b) => (a.era || 'zzz').localeCompare(b.era || 'zzz') || a.title.localeCompare(b.title));
-    case 'theme-proximity':
-      return proximitySort(arr);
     case 'most-played':
-      return arr.sort((a, b) => countOf(b.song_id) - countOf(a.song_id));
+      return arr.sort((a, b) => (b.playlist_count || 0) - (a.playlist_count || 0));
     case 'least-played':
-      return arr.sort((a, b) => countOf(a.song_id) - countOf(b.song_id));
+      return arr.sort((a, b) => (a.playlist_count || 0) - (b.playlist_count || 0));
     default:
       return arr.sort((a, b) => a.title.localeCompare(b.title));
   }
@@ -77,7 +51,8 @@ export function getSorted(songs, sortBy, shuffleOrder, playHistory) {
  */
 export function computeFadedIds(songs, selectedSong, filters, filterMode, searchQuery, playHistory) {
   const anyActive = Object.values(filters).some(v => v);
-  const now7d = Date.now() - 7 * 86400000;
+  // 30-day threshold as a lexicographically comparable SQLite datetime string
+  const thirtyDaysAgoStr = new Date(Date.now() - 30 * 86400000).toISOString().replace('T', ' ').slice(0, 19);
 
   if (searchQuery) {
     const q = searchQuery.toLowerCase();
@@ -115,15 +90,14 @@ export function computeFadedIds(songs, selectedSong, filters, filterMode, search
       checks.push(selArtists.some(a => songArtists.includes(a)));
     }
     if (filters.genre && s)    checks.push(s.genre?.length > 0 && song.genre?.length > 0 && s.genre.some(g => song.genre.includes(g)));
-    // These two work without a selected song
+    // These two work without a selected song; use DB playlist data (30-day window)
     if (filters.unplayed) {
-      const ev = (playHistory || []).filter(e => e.songId === song.song_id);
-      const last = ev.length ? Math.max(...ev.map(e => e.timestamp)) : 0;
-      checks.push(!last || last < now7d);
+      // "Not played recently" = never in a playlist OR last playlist > 30 days ago
+      checks.push(!song.last_playlist_at || song.last_playlist_at < thirtyDaysAgoStr);
     }
     if (filters.frequent) {
-      const count = (playHistory || []).filter(e => e.songId === song.song_id).length;
-      checks.push(count >= 3);
+      // "Played recently" = in a saved playlist within the last 30 days
+      checks.push(!!(song.last_playlist_at && song.last_playlist_at >= thirtyDaysAgoStr));
     }
 
     const matches = filterMode === 'AND'

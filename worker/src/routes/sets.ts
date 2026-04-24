@@ -38,8 +38,16 @@ async function deriveToken(slug: string, password: string, secret: string): Prom
 }
 
 async function fetchSetBySlug(env: Env, slug: string): Promise<Record<string, unknown> | null> {
-  return env.DB.prepare(
+  // Try share_slug first, fall back to id (for playlists created before share_slug was backfilled)
+  const bySlug = await env.DB.prepare(
     `SELECT * FROM playlists WHERE share_slug = ? AND playlist_type = 'client_set'`,
+  )
+    .bind(slug)
+    .first<Record<string, unknown>>();
+  if (bySlug) return bySlug;
+
+  return env.DB.prepare(
+    `SELECT * FROM playlists WHERE id = ?`,
   )
     .bind(slug)
     .first<Record<string, unknown>>();

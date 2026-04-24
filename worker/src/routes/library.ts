@@ -28,16 +28,42 @@ function shapeLibraryRow(row: Record<string, unknown>) {
 // ---------------------------------------------------------------------------
 
 export async function getLibrary(request: AuthRequest, env: Env): Promise<Response> {
+  const userId = request.user!.id;
   const rows = await env.DB.prepare(
-    `SELECT song_id, title, artist, key, bpm, chords_url, genre, era, tags, notes, is_public, added_at
-     FROM user_library
-     WHERE user_id = ?
-     ORDER BY title ASC`,
+    `SELECT ul.song_id, ul.title, ul.artist, ul.key, ul.bpm, ul.chords_url, ul.genre, ul.era, ul.tags, ul.notes, ul.is_public, ul.added_at,
+       (SELECT COUNT(*) FROM playlist_songs ps JOIN playlists p ON p.id = ps.playlist_id
+        WHERE ps.song_id = ul.song_id AND p.user_id = ?) AS playlist_count,
+       (SELECT MAX(p.created_at) FROM playlist_songs ps JOIN playlists p ON p.id = ps.playlist_id
+        WHERE ps.song_id = ul.song_id AND p.user_id = ?) AS last_playlist_at
+     FROM user_library ul
+     WHERE ul.user_id = ?
+     ORDER BY ul.title ASC`,
   )
-    .bind(request.user!.id)
+    .bind(userId, userId, userId)
     .all<Record<string, unknown>>();
 
   return json((rows.results ?? []).map(shapeLibraryRow));
+}
+
+// ---------------------------------------------------------------------------
+// POST /api/library/import-all  — bulk snapshot-copy all public songs
+// ---------------------------------------------------------------------------
+
+export async function importAllSongs(request: AuthRequest, env: Env): Promise<Response> {
+  const userId = request.user!.id;
+
+  await env.DB.prepare(
+    `INSERT OR IGNORE INTO user_library
+       (user_id, song_id, title, artist, key, bpm, chords_url, genre, era, tags, notes, is_public)
+     SELECT ?, id, title, artist, default_key, default_bpm, chords_url, genre, era, tags, NULL, 0
+     FROM songs`,
+  ).bind(userId).run();
+
+  const result = await env.DB.prepare(
+    `SELECT COUNT(*) AS n FROM user_library WHERE user_id = ?`,
+  ).bind(userId).first<{ n: number }>();
+
+  return json({ ok: true, count: result?.n ?? 0 });
 }
 
 // ---------------------------------------------------------------------------

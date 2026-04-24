@@ -214,6 +214,7 @@ export default function FilterPanel({
   onSaveChordsUrl,
   onTogglePublic,
   onEditSong,
+  onDeleteSong,
   onStartLinking,
   linkingMode,
   songs,
@@ -381,6 +382,15 @@ export default function FilterPanel({
                     title={selectedSong.is_public ? 'Public — click to make private' : 'Private — click to make public'}
                   >
                     {selectedSong.is_public ? '🌐 Public' : '🔒 Private'}
+                  </button>
+                </div>
+                <div className="fp-actions" style={{ marginTop: 4 }}>
+                  <button
+                    className="fp-btn fp-delete-btn"
+                    onClick={() => onDeleteSong?.(selectedSong)}
+                    title="Remove from library"
+                  >
+                    ✕ Delete from library
                   </button>
                 </div>
               </>
