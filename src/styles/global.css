@@ -2499,37 +2499,268 @@ body.dark .sp-result.selected { background: #0d2137; }
    MOBILE RESPONSIVENESS
    ============================================================ */
 
+/* ── Mobile label helpers ─────────────────────────────────────────────────── */
+.nav-title-mobile  { display: none; }
+.nav-tab-mobile    { display: none; }
+.nav-tab-desktop   { display: inline; }
+
+/* ── Mobile bottom panels — hidden on desktop ─────────────────────────────── */
+.mobile-bottom-root  { display: none; }
+.mobile-song-sheet   { display: none; }
+.mobile-filter-chips { display: none; }
+.sort-row            { display: contents; } /* transparent wrapper on desktop */
+
+/* ============================================================
+   MOBILE  ≤ 700px
+   ============================================================ */
+
 @media (max-width: 700px) {
   :root { --lp: 0px; --rp: 0px; }
 
+  /* Panels hidden on mobile */
   .filter-panel { display: none !important; }
   .right-panel  { display: none !important; }
 
+  /* Main area */
   .main-area {
     left: 0 !important;
     right: 0 !important;
     top: 42px;
   }
+  body.mobile-np-active .main-area { bottom: 52px; }
 
-  .nav {
-    padding: 0 6px;
-    gap: 4px;
+  /* ── Nav ── */
+  .nav { padding: 0; }
+
+  .nav-brand-cell {
+    width: auto;
+    min-width: 48px;
+    padding: 0 10px;
+    border-right: 1px solid #000;
+    flex-shrink: 0;
+  }
+  .nav-title-desktop { display: none; }
+  .nav-title-mobile  { display: inline; font-size: 12px; letter-spacing: 1px; }
+
+  .nav-tab-desktop { display: none; }
+  .nav-tab-mobile  { display: inline; }
+  .nav-tab-link    { font-size: 11px; padding: 0 10px; }
+
+  .nav-right        { gap: 2px; padding-right: 6px; }
+  .nav-notif-wrap   { display: none; }
+  .nav-user         { display: none; }
+  .nav-logout-btn   { font-size: 10px; padding: 3px 6px; }
+
+  /* ── Song grid ── */
+  .song-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
+  .sc { min-height: 70px; }
+
+  /* ── Sort bar filter chips ── */
+  .sort-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: nowrap;
+    min-width: 0;
+  }
+  .mobile-filter-chips {
+    display: flex;
+    gap: 3px;
+    flex-shrink: 0;
+  }
+  .mfc-chip {
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 700;
+    border: 1px solid #000;
+    background: #fff;
+    padding: 2px 5px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .mfc-chip.on { background: #000; color: #fff; }
+
+  /* ── Mobile song sheet ── */
+  .mobile-song-sheet {
+    display: block;
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    background: #fff;
+    border-top: 2px solid #000;
+    z-index: 220;
+    transform: translateY(100%);
+    transition: transform 0.28s ease;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  body.mobile-np-active .mobile-song-sheet { bottom: 52px; }
+  .mobile-song-sheet.open { transform: translateY(0); }
+
+  .mss-handle-bar {
+    width: 36px; height: 4px;
+    background: #ccc;
+    margin: 8px auto 4px;
+    cursor: pointer;
+  }
+  .mss-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 8px 16px 4px;
+    gap: 8px;
+  }
+  .mss-song-info { flex: 1; min-width: 0; }
+  .mss-title  { font-size: 15px; font-weight: 700; truncate: clip; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mss-artist { font-size: 12px; color: #555; margin-top: 2px; }
+  .mss-meta   { display: flex; gap: 8px; margin-top: 4px; }
+  .mss-key    { font-size: 11px; font-weight: 600; background: #000; color: #fff; padding: 2px 6px; }
+  .mss-bpm    { font-size: 11px; color: #555; }
+  .mss-close  { font-size: 16px; background: none; border: none; cursor: pointer; padding: 0; line-height: 1; flex-shrink: 0; }
+
+  .mss-filters {
+    display: flex;
+    gap: 6px;
+    padding: 8px 16px;
+    flex-wrap: wrap;
+  }
+  .mss-chip {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 700;
+    border: 1px solid #000;
+    background: #fff;
+    padding: 4px 10px;
+    cursor: pointer;
+  }
+  .mss-chip.on { background: #000; color: #fff; }
+
+  .mss-notes {
+    font-size: 11px;
+    color: #555;
+    padding: 0 16px 8px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+  }
+
+  .mss-actions {
+    display: flex;
+    gap: 8px;
+    padding: 8px 16px 16px;
+  }
+  .mss-btn {
+    font-family: var(--font);
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid #000;
+    background: #fff;
+    padding: 10px 14px;
+    cursor: pointer;
+    text-decoration: none;
+    color: #000;
+    flex: 1;
+    text-align: center;
+  }
+  .mss-btn.primary { background: #000; color: #fff; }
+
+  /* ── Mobile bottom root (NP bar + queue) ── */
+  .mobile-bottom-root { display: block; }
+
+  .mobile-np-bar {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: 52px;
+    background: #111;
+    color: #fff;
+    z-index: 230;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    gap: 10px;
+    cursor: pointer;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .mnp-info { flex: 1; min-width: 0; overflow: hidden; }
+  .mnp-title { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mnp-meta  { font-size: 10px; color: #aaa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mnp-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .mnp-chords {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: #fff;
+    border: 1px solid #555;
+    padding: 3px 7px;
+    text-decoration: none;
+  }
+  .mnp-queue-btn {
+    font-family: var(--mono);
+    font-size: 11px;
+    background: none;
+    border: 1px solid #555;
+    color: #fff;
+    padding: 3px 8px;
+    cursor: pointer;
+  }
+  .mnp-close {
+    font-size: 14px;
+    background: none;
+    border: none;
+    color: #aaa;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+  }
+
+  /* Queue sheet */
+  .mobile-queue-sheet {
+    position: fixed;
+    bottom: 52px; left: 0; right: 0;
+    height: 0;
+    background: #111;
+    color: #fff;
+    z-index: 229;
     overflow: hidden;
+    transition: height 0.28s ease;
+    display: flex;
+    flex-direction: column;
   }
+  .mobile-queue-sheet.open { height: 72vh; }
 
-  .nav-brand { gap: 4px; }
-  .nav-brutalist-tabs .nav-btab { padding: 0 10px; font-size: 10px; }
-  .nav-chips { display: none; }
-  .nav-user  { display: none; }
-
-  .song-grid {
-    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  .mqs-handle-bar {
+    width: 36px; height: 4px;
+    background: #444;
+    margin: 10px auto 6px;
+    cursor: pointer;
+    flex-shrink: 0;
   }
-
-  .sc { min-height: 80px; }
+  .mqs-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px 8px;
+    flex-shrink: 0;
+  }
+  .mqs-title { font-size: 13px; font-weight: 600; }
+  .mqs-header .nb { border-color: #555; color: #fff; background: none; }
+  .mqs-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 0 8px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .mqs-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 16px;
+    border-bottom: 1px solid #222;
+    gap: 10px;
+  }
+  .mqs-item-info { flex: 1; min-width: 0; cursor: pointer; }
+  .mqs-item-title { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mqs-item-sub   { font-size: 11px; color: #aaa; }
+  .mqs-remove { background: none; border: none; color: #666; font-size: 14px; cursor: pointer; padding: 4px; flex-shrink: 0; }
+  .mqs-empty  { padding: 24px 16px; color: #555; font-size: 12px; text-align: center; }
 }
 
 @media (max-width: 480px) {
-  .nav-brutalist-tabs .nav-btab { padding: 0 7px; font-size: 9px; }
-  .song-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
+  .nav-tab-link { font-size: 10px; padding: 0 8px; }
+  .song-grid    { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
 }

@@ -53,7 +53,7 @@ function getAllowedOrigins(env: Env): string[] {
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Methods': 'GET, POST, PATCH, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Billy-Session',
   'Access-Control-Max-Age': '86400',
 } as const;
 
@@ -137,7 +137,8 @@ export async function withAuth(
   env: Env,
 ): Promise<Response | undefined> {
   const cookies = parseCookies(request.headers.get('Cookie'));
-  const sessionId = cookies[SESSION_COOKIE];
+  // X-Billy-Session is a mobile fallback for Safari ITP which blocks cross-site cookies
+  const sessionId = cookies[SESSION_COOKIE] || request.headers.get('X-Billy-Session') || null;
 
   if (!sessionId) return error(401, { error: 'Unauthorized' });
 

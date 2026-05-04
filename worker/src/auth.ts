@@ -181,8 +181,8 @@ export async function handleGoogleCallback(
     .bind(sessionId, user.id, expiresAt)
     .run();
 
-  // Redirect to frontend, set session cookie, clear the CSRF state cookie
-  const redirectTo = (env.FRONTEND_ORIGIN || 'http://localhost:5173') + '/app';
+  // Redirect to frontend with session token in URL for mobile Safari (ITP blocks cross-site cookies)
+  const redirectTo = `${env.FRONTEND_ORIGIN || 'http://localhost:5173'}/app/auth-complete?s=${sessionId}`;
   const headers = new Headers({ Location: redirectTo });
   headers.append('Set-Cookie', makeSessionCookie(sessionId));
 

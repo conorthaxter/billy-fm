@@ -1,5 +1,5 @@
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { SettingsProvider } from './contexts/SettingsContext';
 import { PlayStateProvider, usePlayState } from './contexts/PlayStateContext';
 
@@ -29,12 +29,14 @@ function AuthProvider({ children }) {
   const [user,      setUser]      = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    getMe()
-      .then(setUser)
-      .catch(() => setUser(null))
-      .finally(() => setIsLoading(false));
+  const refresh = useCallback(async () => {
+    setIsLoading(true);
+    try { setUser(await getMe()); }
+    catch { setUser(null); }
+    finally { setIsLoading(false); }
   }, []);
+
+  useEffect(() => { refresh(); }, []); // eslint-disable-line
 
   const login = useCallback(() => { redirectToGoogle(); }, []);
 
@@ -50,10 +52,27 @@ function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, isLoading, login, logout, updateUser, refresh }}>
       {children}
     </AuthContext.Provider>
   );
+}
+
+// ---------------------------------------------------------------------------
+// Auth complete — handles mobile Safari token handoff after OAuth redirect
+// ---------------------------------------------------------------------------
+
+function AuthComplete() {
+  const { refresh } = useContext(AuthContext);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const s = new URLSearchParams(window.location.search).get('s');
+    if (s) { try { localStorage.setItem('bfm_token', s); } catch { /* ignore */ } }
+    refresh().then(() => navigate('/dashboard', { replace: true }));
+  }, []); // eslint-disable-line
+
+  return <div className="empty-state">Signing in…</div>;
 }
 
 // ---------------------------------------------------------------------------
@@ -72,6 +91,77 @@ function RootRedirect() {
   const { user, isLoading } = useContext(AuthContext);
   if (isLoading) return <div className="empty-state">Loading…</div>;
   return <Navigate to={user ? '/dashboard' : '/login'} replace />;
+}
+
+// ---------------------------------------------------------------------------
+// Mobile bottom panel — NP bar + queue sheet (hidden on desktop via CSS)
+// ---------------------------------------------------------------------------
+
+function MobileBottomPanel() {
+  const { user } = useContext(AuthContext);
+  const location = useLocation();
+  const ctx = usePlayState();
+  const [queueOpen, setQueueOpen] = useState(false);
+
+  const hide = !user || ['/login', '/'].some(p => location.pathname === p) ||
+    ['/r/', '/set/', '/songbook/', '/wedding/', '/request/'].some(p => location.pathname.startsWith(p));
+
+  const { nowPlaying, queue, playSong, removeFromQueue, clearNP, dashExtras = {} } = ctx || {};
+  const { onSelectSong = () => {} } = dashExtras;
+
+  useEffect(() => {
+    document.body.classList.toggle('mobile-np-active', !hide && !!nowPlaying);
+    return () => document.body.classList.remove('mobile-np-active');
+  }, [hide, nowPlaying]);
+
+  useEffect(() => { if (!nowPlaying) setQueueOpen(false); }, [nowPlaying]);
+
+  if (hide || !ctx) return null;
+
+  return (
+    <div className="mobile-bottom-root">
+      {/* Queue sheet — slides up from above the NP bar */}
+      <div className={`mobile-queue-sheet${queueOpen ? ' open' : ''}`}>
+        <div className="mqs-handle-bar" onClick={() => setQueueOpen(false)} />
+        <div className="mqs-header">
+          <span className="mqs-title">Queue ({queue.length})</span>
+          <button className="nb" onClick={() => setQueueOpen(false)}>✕</button>
+        </div>
+        <div className="mqs-list">
+          {queue.map((s, i) => (
+            <div key={s.song_id} className="mqs-item">
+              <div className="mqs-item-info" onClick={() => { playSong(s); onSelectSong(s); setQueueOpen(false); }}>
+                <div className="mqs-item-title">{s.title}</div>
+                <div className="mqs-item-sub">{s.artist}{s.key ? ` · ${s.key}` : ''}</div>
+              </div>
+              <button className="mqs-remove" onClick={() => removeFromQueue(i)}>✕</button>
+            </div>
+          ))}
+          {queue.length === 0 && <div className="mqs-empty">Queue is empty</div>}
+        </div>
+      </div>
+
+      {/* NP bar */}
+      {nowPlaying && (
+        <div className="mobile-np-bar" onClick={() => setQueueOpen(o => !o)}>
+          <div className="mnp-info">
+            <div className="mnp-title">{nowPlaying.title}</div>
+            <div className="mnp-meta">{nowPlaying.artist}{nowPlaying.key ? ` · ${nowPlaying.key}` : ''}</div>
+          </div>
+          <div className="mnp-actions" onClick={e => e.stopPropagation()}>
+            {nowPlaying.chords_url && (
+              <a className="mnp-chords" href={nowPlaying.chords_url} target="_blank" rel="noopener"
+                onClick={e => e.stopPropagation()}>chords</a>
+            )}
+            <button className="mnp-queue-btn" onClick={e => { e.stopPropagation(); setQueueOpen(o => !o); }}>
+              {queueOpen ? '↓' : '↑'}{queue.length > 0 ? ` ${queue.length}` : ''}
+            </button>
+            <button className="mnp-close" onClick={e => { e.stopPropagation(); clearNP(); }}>✕</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -189,6 +279,7 @@ export default function App() {
             <Routes>
               <Route path="/" element={<RootRedirect />} />
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/auth-complete" element={<AuthComplete />} />
               <Route path="/dashboard" element={<RequireAuth><DashboardPage /></RequireAuth>} />
               <Route path="/marketplace" element={<RequireAuth><MarketplacePage /></RequireAuth>} />
               <Route path="/playlists" element={<RequireAuth><PlaylistsPage /></RequireAuth>} />
@@ -198,6 +289,7 @@ export default function App() {
               <Route path="/request/:slug" element={<RequestQueuePage />} />
             </Routes>
             <GlobalRightPanel />
+            <MobileBottomPanel />
           </PlayStateProvider>
         </AuthProvider>
       </SettingsProvider>

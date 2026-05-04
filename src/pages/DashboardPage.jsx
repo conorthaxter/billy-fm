@@ -891,6 +891,8 @@ export default function DashboardPage() {
               onZoomChange={handleZoomChange}
               onSearchOpen={() => setSearchOpen(true)}
               onImportOpen={() => setImportOpen(true)}
+              filters={filters}
+              onFilterChange={(k, v) => setFilters(f => ({ ...f, [k]: v }))}
             />
           )
         )}
@@ -946,6 +948,48 @@ export default function DashboardPage() {
 
       {/* Notification toast */}
       {notifMsg && <div className="notif">{notifMsg}</div>}
+
+      {/* Mobile selected-song sheet */}
+      <div className={`mobile-song-sheet${selectedSong ? ' open' : ''}`}>
+        <div className="mss-handle-bar" onClick={clearSelectedSong} />
+        <div className="mss-header">
+          <div className="mss-song-info">
+            <div className="mss-title">{selectedSong?.title}</div>
+            <div className="mss-artist">{selectedSong?.artist}</div>
+            <div className="mss-meta">
+              {selectedSong?.key && <span className="mss-key">{selectedSong.key}</span>}
+              {selectedSong?.bpm && <span className="mss-bpm">{selectedSong.bpm} BPM</span>}
+            </div>
+          </div>
+          <button className="mss-close" onClick={clearSelectedSong}>✕</button>
+        </div>
+
+        <div className="mss-filters">
+          {[['key','KEY'],['bpm','BPM'],['era','ERA'],['artist','ARTIST'],['genre','GENRE']].map(([k, label]) => (
+            <button
+              key={k}
+              className={`mss-chip${filters[k] ? ' on' : ''}`}
+              onClick={() => setFilters(f => ({ ...f, [k]: !f[k] }))}
+            >{label}</button>
+          ))}
+        </div>
+
+        {selectedSong?.notes && <div className="mss-notes">{selectedSong.notes}</div>}
+
+        <div className="mss-actions">
+          <button className="mss-btn primary" onClick={() => { if (selectedSong) { playSong(selectedSong); clearSelectedSong(); } }}>
+            ▶ Play Now
+          </button>
+          <button className="mss-btn" onClick={() => { if (selectedSong) { addToQueue(selectedSong); clearSelectedSong(); } }}>
+            + Queue
+          </button>
+          {selectedSong?.chords_url && (
+            <a className="mss-btn" href={selectedSong.chords_url} target="_blank" rel="noopener">
+              ♩ Chords
+            </a>
+          )}
+        </div>
+      </div>
     </>
   );
 }

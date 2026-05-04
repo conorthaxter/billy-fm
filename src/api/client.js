@@ -10,6 +10,12 @@ const BASE = import.meta.env.VITE_API_URL ?? '';
 export async function apiFetch(path, { body, ...opts } = {}) {
   const headers = { ...(opts.headers ?? {}) };
 
+  // Mobile Safari ITP blocks cross-site cookies; fall back to localStorage token as header
+  try {
+    const token = localStorage.getItem('bfm_token');
+    if (token) headers['X-Billy-Session'] = token;
+  } catch { /* localStorage unavailable */ }
+
   if (body !== undefined) {
     headers['Content-Type'] = 'application/json';
   }
@@ -22,6 +28,9 @@ export async function apiFetch(path, { body, ...opts } = {}) {
   });
 
   if (!response.ok) {
+    if (response.status === 401) {
+      try { localStorage.removeItem('bfm_token'); } catch { /* ignore */ }
+    }
     let message = `HTTP ${response.status}`;
     try {
       const data = await response.json();

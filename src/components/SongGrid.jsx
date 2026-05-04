@@ -32,6 +32,8 @@ export default function SongGrid({
   onZoomChange,
   onSearchOpen,
   onImportOpen,
+  filters,
+  onFilterChange,
 }) {
   const { palette } = useSettings();
   const sorted = getSorted(songs, sortBy, shuffleOrder);
@@ -173,6 +175,7 @@ export default function SongGrid({
   return (
     <div className="grid-area" style={{ '--tile-zoom': tileZoom }} onClick={handleGridClick}>
       <div className="controls">
+        <div className="sort-row">
         <span style={{ fontSize: 11, fontWeight: 500 }}>Sort:</span>
         <select
           value={sortBy}
@@ -188,6 +191,20 @@ export default function SongGrid({
           <option value="most-played">Most Played</option>
           <option value="least-played">Least Played</option>
         </select>
+
+        {/* Mobile filter chips — shown when a song is selected, replaces hidden filter panel */}
+        {selectedSong && filters && (
+          <div className="mobile-filter-chips">
+            {[['key','KEY'],['bpm','BPM'],['era','ERA'],['artist','ART'],['genre','GNR']].map(([k, label]) => (
+              <button
+                key={k}
+                className={`mfc-chip${filters[k] ? ' on' : ''}`}
+                onClick={() => onFilterChange?.(k, !filters[k])}
+              >{label}</button>
+            ))}
+          </div>
+        )}
+        </div>{/* end sort-row */}
 
         <div className="key-filter-row">
           <button
