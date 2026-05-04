@@ -483,6 +483,7 @@ body.enriching .enrich-bar { top: calc(42px + 24px); }
   flex-direction: column;
   justify-content: space-between;
   transition: opacity 250ms ease, transform 250ms ease;
+  touch-action: manipulation;
 }
 .sc:hover           { border: 2px solid rgba(0,0,0,.7); }
 .sc.faded           { opacity: .1; transform: scale(.9); pointer-events: none; }
