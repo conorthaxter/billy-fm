@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS user_library (
   era TEXT,
   tags TEXT,
   notes TEXT,
-  is_public BOOLEAN DEFAULT 0,
+  is_public BOOLEAN DEFAULT 1,
   added_at TEXT DEFAULT (datetime('now')),
   PRIMARY KEY (user_id, song_id)
 );

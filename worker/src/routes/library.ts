@@ -55,7 +55,7 @@ export async function importAllSongs(request: AuthRequest, env: Env): Promise<Re
   await env.DB.prepare(
     `INSERT OR IGNORE INTO user_library
        (user_id, song_id, title, artist, key, bpm, chords_url, genre, era, tags, notes, is_public)
-     SELECT ?, id, title, artist, default_key, default_bpm, chords_url, genre, era, tags, NULL, 0
+     SELECT ?, id, title, artist, default_key, default_bpm, chords_url, genre, era, tags, NULL, 1
      FROM songs`,
   ).bind(userId).run();
 
@@ -83,11 +83,12 @@ export async function addToLibrary(request: AuthRequest, env: Env): Promise<Resp
 
   if (existing) return error(409, { error: 'Song already in your library' });
 
-  // Optional body: { is_public?: boolean }
-  let isPublic = 0;
+  // Optional body: { is_public?: boolean } — defaults to public so songs
+  // surface on conor.bio without an extra step; pass is_public: false to opt out.
+  let isPublic = 1;
   try {
     const body = await request.json<{ is_public?: boolean }>();
-    isPublic = body.is_public ? 1 : 0;
+    if (body.is_public !== undefined) isPublic = body.is_public ? 1 : 0;
   } catch { /* no body */ }
 
   // Read the marketplace song — snapshot all fields

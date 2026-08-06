@@ -236,8 +236,8 @@ export async function importCsv(request: AuthRequest, env: Env): Promise<Respons
         const url = s.chords_url?.startsWith('http') ? s.chords_url : chordsUrl(s.title, s.artist);
         return env.DB.prepare(
           `INSERT OR IGNORE INTO user_library
-             (user_id, song_id, title, artist, key, bpm, chords_url, genre, era, tags, notes)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             (user_id, song_id, title, artist, key, bpm, chords_url, genre, era, tags, notes, is_public)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
         ).bind(
           userId, row.id,
           s.title.trim(), s.artist.trim(),
