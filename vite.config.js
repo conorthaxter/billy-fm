@@ -7,8 +7,9 @@ export default defineConfig({
   build: {
     rollupOptions: {
       input: {
-        main: resolve(__dirname, 'index.html'),
-        app:  resolve(__dirname, 'app/index.html'),
+        main:     resolve(__dirname, 'index.html'),
+        app:      resolve(__dirname, 'app/index.html'),
+        songList: resolve(__dirname, 'song-list/index.html'),
       },
     },
   },
