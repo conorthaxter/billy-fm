@@ -25,6 +25,8 @@ CREATE TABLE IF NOT EXISTS songs (
   tags TEXT,
   added_by TEXT REFERENCES users(id),
   created_at TEXT DEFAULT (datetime('now')),
+  wedding_rank INTEGER DEFAULT NULL,
+  wedding_moment TEXT DEFAULT NULL,
   UNIQUE(title, artist)
 );
 
@@ -181,3 +183,4 @@ CREATE INDEX IF NOT EXISTS idx_off_list_playlist ON off_list_requests(playlist_i
 CREATE INDEX IF NOT EXISTS idx_submissions_playlist ON set_submissions(playlist_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_unread ON notifications(user_id, is_read);
+CREATE INDEX IF NOT EXISTS idx_songs_wedding_rank ON songs(wedding_rank);
