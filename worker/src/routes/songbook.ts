@@ -30,7 +30,7 @@ async function getPublicLibrary(
     `SELECT ul.song_id, ul.title, ul.artist, ul.key, ul.bpm, ul.tags, ul.genre, s.wedding_rank, s.wedding_moment
      FROM user_library ul
      LEFT JOIN songs s ON s.id = ul.song_id
-     WHERE ul.user_id = ? AND ul.is_public = 1
+     WHERE ul.user_id = ? AND ul.is_public = 1 AND (s.needs_work IS NULL OR s.needs_work = 0)
      ORDER BY ul.title ASC`,
   )
     .bind(userId)

@@ -48,6 +48,7 @@ export async function listSongs(request: AuthRequest, env: Env): Promise<Respons
   const genreParam = url.searchParams.get('genre') ?? '';
   const eraParam   = url.searchParams.get('era')   ?? '';
   const key        = url.searchParams.get('key')   ?? '';
+  const needsWorkParam = url.searchParams.get('needs_work') ?? '';
   const sort       = url.searchParams.get('sort')  ?? 'title';
   const page   = Math.max(1, parseInt(url.searchParams.get('page')  ?? '1',  10));
   const limit  = Math.min(200, Math.max(1, parseInt(url.searchParams.get('limit') ?? '50', 10)));
@@ -97,6 +98,10 @@ export async function listSongs(request: AuthRequest, env: Env): Promise<Respons
   if (key) {
     conditions.push(`s.default_key = ?`);
     bindings.push(key);
+  }
+
+  if (needsWorkParam === '1') {
+    conditions.push(`s.needs_work = 1`);
   }
 
   const where   = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
@@ -238,7 +243,13 @@ export async function patchSong(request: AuthRequest, env: Env): Promise<Respons
     genre?: string[];
     tags?: string[];
     era?: string;
+    needs_work?: number;
+    work_note?: string;
   }>();
+
+  if (body.needs_work !== undefined && body.needs_work !== 0 && body.needs_work !== 1) {
+    return error(400, { error: 'needs_work must be 0 or 1' });
+  }
 
   // Build SET clause from provided fields only
   const sets: string[]   = [];
@@ -252,6 +263,8 @@ export async function patchSong(request: AuthRequest, env: Env): Promise<Respons
   if (body.genre       !== undefined) { sets.push('genre = ?');       values.push(JSON.stringify(body.genre)); }
   if (body.tags        !== undefined) { sets.push('tags = ?');        values.push(JSON.stringify(body.tags)); }
   if (body.era         !== undefined) { sets.push('era = ?');         values.push(body.era); }
+  if (body.needs_work  !== undefined) { sets.push('needs_work = ?');  values.push(body.needs_work); }
+  if (body.work_note   !== undefined) { sets.push('work_note = ?');   values.push(body.work_note); }
 
   if (sets.length === 0) return error(400, { error: 'No fields to update' });
 

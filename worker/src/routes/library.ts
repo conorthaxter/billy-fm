@@ -31,11 +31,13 @@ export async function getLibrary(request: AuthRequest, env: Env): Promise<Respon
   const userId = request.user!.id;
   const rows = await env.DB.prepare(
     `SELECT ul.song_id, ul.title, ul.artist, ul.key, ul.bpm, ul.chords_url, ul.genre, ul.era, ul.tags, ul.notes, ul.is_public, ul.added_at,
+       s.needs_work, s.work_note, s.chord_chart_url,
        (SELECT COUNT(*) FROM playlist_songs ps JOIN playlists p ON p.id = ps.playlist_id
         WHERE ps.song_id = ul.song_id AND p.user_id = ?) AS playlist_count,
        (SELECT MAX(p.created_at) FROM playlist_songs ps JOIN playlists p ON p.id = ps.playlist_id
         WHERE ps.song_id = ul.song_id AND p.user_id = ?) AS last_playlist_at
      FROM user_library ul
+     LEFT JOIN songs s ON s.id = ul.song_id
      WHERE ul.user_id = ?
      ORDER BY ul.title ASC`,
   )

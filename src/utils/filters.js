@@ -99,6 +99,10 @@ export function computeFadedIds(songs, selectedSong, filters, filterMode, search
       // "Played recently" = in a saved playlist within the last 30 days
       checks.push(!!(song.last_playlist_at && song.last_playlist_at >= thirtyDaysAgoStr));
     }
+    // Independent of selection or the other (currently broken) similarity filters
+    if (filters.needs_work) {
+      checks.push(!!song.needs_work);
+    }
 
     const matches = filterMode === 'AND'
       ? (checks.length > 0 && checks.every(v => v))
