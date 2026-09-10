@@ -1,6 +1,5 @@
 import { keyColor, darken } from '../utils/keyColors';
 import { useSettings } from '../contexts/SettingsContext';
-import { chordChartUrl } from '../utils/chordChart';
 
 export default function SongCell({ song, isNowPlaying, isSelected, isFaded, isMatch, isCursor, isMultiSelected, onMouseEnter, onSelect, onDblClick, onAddToQueue, onDragStart, onToggleNeedsWork }) {
   const { palette } = useSettings();
@@ -54,15 +53,6 @@ export default function SongCell({ song, isNowPlaying, isSelected, isFaded, isMa
         <span className="sc-key-lbl">{song.key || '?'}</span>
         {song.bpm ? <span className="sc-bpm">{song.bpm}</span> : null}
       </div>
-      {needsWork && (
-        <a
-          className="sc-chords-link"
-          href={chordChartUrl(song)}
-          target="_blank"
-          rel="noopener"
-          onClick={e => e.stopPropagation()}
-        >chords ↗</a>
-      )}
       <button
         className="sc-qbtn"
         title="Add to queue"

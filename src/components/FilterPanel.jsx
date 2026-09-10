@@ -539,13 +539,6 @@ export default function FilterPanel({
           />
           Played frequently (3+)
         </label>
-      </div>
-
-      {/* Needs work — a plain on/off filter, independent of the (currently
-          broken) era/genre similarity filters above; works with or without
-          a selected song. */}
-      <div className="fp-sec">
-        <div className="fp-hd">Backlog</div>
         <label className="fp-row">
           <input
             type="checkbox"
