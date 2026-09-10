@@ -1,0 +1,4 @@
+ALTER TABLE songs ADD COLUMN needs_work INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE songs ADD COLUMN work_note TEXT DEFAULT NULL;
+ALTER TABLE songs ADD COLUMN chord_chart_url TEXT DEFAULT NULL;
+CREATE INDEX IF NOT EXISTS idx_songs_needs_work ON songs(needs_work);

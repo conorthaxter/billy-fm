@@ -540,6 +540,42 @@ body.enriching .enrich-bar { top: calc(42px + 24px); }
 .sc:hover .sc-qbtn  { opacity: .7; }
 .sc-qbtn:hover      { opacity: 1 !important; background: rgba(0,0,0,.15); }
 
+/* "Needs work" dog-ear — folded corner, top-right. Two triangles: a shadow
+   (full size, reads as paper depth) and the fold face (inset, tinted a
+   shade darker than the tile via --fold-color, set inline per-tile since
+   tile color itself is computed per-song). */
+.sc-fold {
+  position: absolute;
+  top: 0; right: 0;
+  width: 22px; height: 22px;
+  cursor: pointer;
+  z-index: 4;
+}
+.sc-fold::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,.35);
+  clip-path: polygon(100% 0, 0 0, 100% 100%);
+}
+.sc-fold::after {
+  content: '';
+  position: absolute;
+  top: 2px; left: 2px; right: 0; bottom: 2px;
+  background: var(--fold-color, rgba(0,0,0,.5));
+  clip-path: polygon(100% 0, 0 0, 100% 100%);
+}
+
+.sc-chords-link {
+  position: absolute;
+  bottom: 5px; left: 6px;
+  font-size: calc(8px * var(--tile-zoom, 1));
+  font-weight: bold;
+  color: inherit;
+  text-decoration: underline;
+  z-index: 3;
+}
+
 /* ============================================================
    RIGHT PANEL
    ============================================================ */

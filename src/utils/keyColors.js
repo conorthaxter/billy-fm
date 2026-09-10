@@ -173,6 +173,16 @@ export function keyColor(key, palette = 'festival') {
   return [`hsl(${h},${s}%,${l}%)`, l < 55 ? '#fff' : '#000'];
 }
 
+// Darkens a tile background produced by keyColor() by a fixed lightness
+// delta, for decorative elements (e.g. the "needs work" fold) that must
+// read as a shade of whatever color the tile itself already is.
+export function darken(bg, amount = 12) {
+  const m = /^hsl\((\d+(?:\.\d+)?),(\d+(?:\.\d+)?)%,(\d+(?:\.\d+)?)%\)$/.exec(bg);
+  if (!m) return bg; // '#888' fallback — close enough without a second literal
+  const [, h, s, l] = m;
+  return `hsl(${h},${s}%,${Math.max(0, parseFloat(l) - amount)}%)`;
+}
+
 // All 12 major keys for preview strips (legacy order)
 export const MAJOR_KEYS_PREVIEW = ['C','D','E','F','G','A','B','C#','Eb','F#','Ab','Bb'];
 

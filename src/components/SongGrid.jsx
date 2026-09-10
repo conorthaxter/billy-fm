@@ -34,6 +34,7 @@ export default function SongGrid({
   onImportOpen,
   filters,
   onFilterChange,
+  onToggleNeedsWork,
 }) {
   const { palette } = useSettings();
   const sorted = getSorted(songs, sortBy, shuffleOrder);
@@ -300,6 +301,7 @@ export default function SongGrid({
                 }}
                 onDblClick={() => onPlaySong(song)}
                 onAddToQueue={() => onAddToQueue(song)}
+                onToggleNeedsWork={() => onToggleNeedsWork?.(song)}
                 onDragStart={e => {
                   if (multiSelected.has(id)) {
                     const all = songs.filter(s => multiSelected.has(s.song_id));

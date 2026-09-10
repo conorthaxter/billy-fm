@@ -3,6 +3,7 @@ import { keyColor, MAJOR_KEYS_PREVIEW } from '../utils/keyColors';
 import { useSettings } from '../contexts/SettingsContext';
 import { getTransitions, deleteTransition } from '../api/transitions';
 import { ALL_KEYS } from '../utils/transposition';
+import { chordChartUrl } from '../utils/chordChart';
 
 function ChordsLink({ song, onSaveChordsUrl }) {
   const [editing, setEditing] = useState(false);
@@ -50,6 +51,45 @@ function ChordsLink({ song, onSaveChordsUrl }) {
     <button className="fp-chords-btn fp-chords-add" onClick={() => { setUrlInput(''); setEditing(true); }}>
       + Add chords link
     </button>
+  );
+}
+
+function NeedsWorkEditor({ song, onSave }) {
+  const [note, setNote] = useState(song?.work_note || '');
+  const noteRef = useRef(note);
+  noteRef.current = note;
+
+  useEffect(() => { setNote(song?.work_note || ''); }, [song?.song_id]); // eslint-disable-line
+
+  function handleNoteBlur() {
+    const current = noteRef.current;
+    if (current !== (song?.work_note || '')) onSave?.({ work_note: current });
+  }
+
+  if (!song) return null;
+
+  return (
+    <div style={{ marginTop: 8 }}>
+      <label className="fp-row">
+        <input
+          type="checkbox"
+          checked={!!song.needs_work}
+          onChange={e => onSave?.({ needs_work: e.target.checked ? 1 : 0 })}
+        />
+        Needs work
+      </label>
+      {song.needs_work ? (
+        <input
+          type="text"
+          className="fp-edit-input"
+          style={{ marginTop: 4 }}
+          value={note}
+          onChange={e => setNote(e.target.value)}
+          onBlur={handleNoteBlur}
+          placeholder="e.g. relearn bridge, never played"
+        />
+      ) : null}
+    </div>
   );
 }
 
@@ -212,6 +252,7 @@ export default function FilterPanel({
   onAddToQueue,
   onSaveNotes,
   onSaveChordsUrl,
+  onSaveNeedsWork,
   onTogglePublic,
   onEditSong,
   onDeleteSong,
@@ -401,6 +442,19 @@ export default function FilterPanel({
               <ChordsLink song={selectedSong} onSaveChordsUrl={onSaveChordsUrl} />
             </div>
 
+            {/* Chord chart lookup — always shown, independent of the user's own chords_url above */}
+            <div style={{ marginTop: 4 }}>
+              <a
+                href={chordChartUrl(selectedSong)}
+                target="_blank"
+                rel="noopener"
+                className="fp-chords-btn"
+              >chords ↗</a>
+            </div>
+
+            {/* Needs work */}
+            <NeedsWorkEditor song={selectedSong} onSave={onSaveNeedsWork} />
+
             {/* Theme tags */}
             <TagsEditor
               tags={selectedSong.tags}
@@ -484,6 +538,21 @@ export default function FilterPanel({
             onChange={e => onFilterChange('frequent', e.target.checked)}
           />
           Played frequently (3+)
+        </label>
+      </div>
+
+      {/* Needs work — a plain on/off filter, independent of the (currently
+          broken) era/genre similarity filters above; works with or without
+          a selected song. */}
+      <div className="fp-sec">
+        <div className="fp-hd">Backlog</div>
+        <label className="fp-row">
+          <input
+            type="checkbox"
+            checked={!!filters.needs_work}
+            onChange={e => onFilterChange('needs_work', e.target.checked)}
+          />
+          Needs work · {(songs || []).filter(s => s.needs_work).length}
         </label>
       </div>
 

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { getLibrary, updateLibraryEntry, removeFromLibrary, importAllSongs } from '../api/library';
+import { updateSong } from '../api/songs';
 import { createPlaylist, listPlaylists, setPlaylistSongs, getPlaylist, updatePlaylist, deletePlaylist } from '../api/playlists';
 import { getTransitions, createTransition as apiCreateTransition } from '../api/transitions';
 import { enrichSongs, getFirstWord } from '../utils/enrichment';
@@ -149,7 +150,7 @@ export default function DashboardPage() {
   const [multiSelected, setMultiSelected] = useState([]);
 
   // Filter / sort
-  const [filters,     setFilters]     = useState({ key:false, bpm:false, theme:false, era:false, artist:false, genre:false, unplayed:false, frequent:false });
+  const [filters,     setFilters]     = useState({ key:false, bpm:false, theme:false, era:false, artist:false, genre:false, unplayed:false, frequent:false, needs_work:false });
   const [filterMode,  setFilterMode]  = useState('OR');
   const [sortBy,      setSortBy]      = useState(defaultSort);
   const [shuffleOrder,setShuffleOrder]= useState([]);
@@ -429,7 +430,7 @@ export default function DashboardPage() {
 
   // ── Actions ───────────────────────────────────────────────────────────────
 
-  const CLEAR_FILTERS = { key:false, bpm:false, theme:false, era:false, artist:false, genre:false, unplayed:false, frequent:false };
+  const CLEAR_FILTERS = { key:false, bpm:false, theme:false, era:false, artist:false, genre:false, unplayed:false, frequent:false, needs_work:false };
 
   function clearSelectedSong() {
     setSelectedSong(null);
@@ -719,6 +720,34 @@ export default function DashboardPage() {
     } catch { /* silent */ }
   }
 
+  // needs_work/work_note/chord_chart_url live on the marketplace `songs` row
+  // (shared across everyone who has this song), not on the personal
+  // user_library snapshot — so these go through /api/songs, not /api/library.
+
+  async function handleToggleNeedsWork(song) {
+    const needs_work = song.needs_work ? 0 : 1;
+    setSongs(prev => prev.map(s => s.song_id === song.song_id ? { ...s, needs_work } : s));
+    setSelectedSong(prev => prev?.song_id === song.song_id ? { ...prev, needs_work } : prev);
+    try {
+      await updateSong(song.song_id, { needs_work });
+    } catch (err) {
+      setSongs(prev => prev.map(s => s.song_id === song.song_id ? { ...s, needs_work: song.needs_work } : s));
+      setSelectedSong(prev => prev?.song_id === song.song_id ? { ...prev, needs_work: song.needs_work } : prev);
+      notify(err.message || 'Failed to update needs-work status');
+    }
+  }
+
+  async function saveNeedsWork(fields) {
+    if (!selectedSong) return;
+    try {
+      await updateSong(selectedSong.song_id, fields);
+      setSongs(prev => prev.map(s => s.song_id === selectedSong.song_id ? { ...s, ...fields } : s));
+      setSelectedSong(prev => prev ? { ...prev, ...fields } : prev);
+    } catch (err) {
+      notify(err.message || 'Failed to save');
+    }
+  }
+
   async function handleDeleteSong(song) {
     if (!confirm(`Remove "${song.title}" from your library?`)) return;
     try {
@@ -827,6 +856,7 @@ export default function DashboardPage() {
         onAddToQueue={() => selectedSong && addToQueue(selectedSong)}
         onSaveNotes={saveNotes}
         onSaveChordsUrl={saveChordsUrl}
+        onSaveNeedsWork={saveNeedsWork}
         onTogglePublic={togglePublic}
         onEditSong={editSong}
         onDeleteSong={handleDeleteSong}
@@ -880,6 +910,7 @@ export default function DashboardPage() {
               multiSelected={new Set(multiSelected.map(s => s.song_id))}
               onClearMultiSelect={() => setMultiSelected([])}
               onAddToQueue={addToQueue}
+              onToggleNeedsWork={handleToggleNeedsWork}
               onDeselect={clearSelectedSong}
               loading={loading}
               error={loadError}
