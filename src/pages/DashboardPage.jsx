@@ -7,6 +7,7 @@ import { getTransitions, createTransition as apiCreateTransition } from '../api/
 import { enrichSongs, getFirstWord } from '../utils/enrichment';
 import { shuffle, computeFadedIds } from '../utils/filters';
 import { RELATIVE_MAP, ENHARMONIC_MAP } from '../utils/keyColors';
+import { transposeKey } from '../utils/transposition';
 import { usePlayState } from '../contexts/PlayStateContext';
 
 import AppHeader      from '../components/AppHeader';
@@ -16,6 +17,7 @@ import FilterPanel     from '../components/FilterPanel';
 import PlaylistsPanel  from '../components/PlaylistsPanel';
 import SearchBar       from '../components/SearchBar';
 import ImportDialog    from '../components/ImportDialog';
+import FocusMode       from '../components/chords/FocusMode';
 
 function sessionDateTitle() {
   return new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
@@ -185,6 +187,7 @@ export default function DashboardPage() {
   const [importingDefault, setImportingDefault] = useState(false);
   const [newSetNameOpen,  setNewSetNameOpen]  = useState(false);
   const [linkingMode,  setLinkingMode]  = useState(false);
+  const [focusSongId,  setFocusSongId]  = useState(null);
   const [suggestions,  setSuggestions]  = useState([]);
   const [dismissedSug, setDismissedSug] = useState(new Set());
   const [notifMsg,     notify]          = useNotify();
@@ -208,8 +211,14 @@ export default function DashboardPage() {
         const data = await getLibrary();
         if (cancelled) return;
 
+        // user_library.key stays the stored base (key_base) and is never overwritten by
+        // transposing; `key` is the preferred key (base + transpose_offset) that the
+        // chips, sorting and Match Filters read.
         const normalised = data.map(s => ({
           ...s,
+          key_base: s.key,
+          key: transposeKey(s.key, s.transpose_offset || 0),
+          has_chart: !!s.has_chart,
           firstWord: getFirstWord(s.title),
           genre: Array.isArray(s.genre) ? s.genre : [],
           tags:  Array.isArray(s.tags)  ? s.tags  : [],
@@ -283,6 +292,9 @@ export default function DashboardPage() {
 
   useEffect(() => {
     function onKey(e) {
+      // Focus mode owns the keyboard while it is open
+      if (focusSongId) return;
+
       // ESC — dismiss layers in order
       if (e.key === 'Escape') {
         if (dlg)          { closeDialog(); return; }
@@ -329,11 +341,11 @@ export default function DashboardPage() {
         return;
       }
 
-      // SPACE — open chords link
+      // SPACE — focus mode for the now-playing song
       if (e.key === ' ') {
-        if (selectedSong?.chords_url) {
+        if (nowPlaying) {
           e.preventDefault();
-          window.open(selectedSong.chords_url, '_blank', 'noopener');
+          setFocusSongId(nowPlaying.song_id);
         }
         return;
       }
@@ -394,7 +406,7 @@ export default function DashboardPage() {
     }
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [dlg, searchOpen, nowPlaying, selectedSong, cursorSong, queue, tileZoom]); // eslint-disable-line
+  }, [dlg, searchOpen, nowPlaying, selectedSong, cursorSong, queue, tileZoom, focusSongId]); // eslint-disable-line
 
   // ── Computed faded IDs ────────────────────────────────────────────────────
 
@@ -696,9 +708,47 @@ export default function DashboardPage() {
     if (!selectedSong) return;
     try {
       await updateLibraryEntry(selectedSong.song_id, fields);
-      setSongs(prev => prev.map(s => s.song_id === selectedSong.song_id ? { ...s, ...fields } : s));
-      setSelectedSong(prev => prev ? { ...prev, ...fields } : prev);
+      const apply = s => {
+        const next = { ...s, ...fields };
+        // An edited key is the new base; the displayed key is that base transposed.
+        if (fields.key !== undefined) {
+          next.key_base = fields.key;
+          next.key = transposeKey(fields.key, s.transpose_offset || 0);
+        }
+        return next;
+      };
+      setSongs(prev => prev.map(s => s.song_id === selectedSong.song_id ? apply(s) : s));
+      setSelectedSong(prev => prev ? apply(prev) : prev);
     } catch { /* silent */ }
+  }
+
+  // ── Chords / transpose ────────────────────────────────────────────────────
+
+  const applyOffset = (s, offset) => ({ ...s, transpose_offset: offset, key: transposeKey(s.key_base ?? s.key, offset) });
+
+  function patchSongEverywhere(songId, fn) {
+    setSongs(prev => prev.map(s => s.song_id === songId ? fn(s) : s));
+    setSelectedSong(prev => prev?.song_id === songId ? fn(prev) : prev);
+    setNowPlaying(prev => prev?.song_id === songId ? fn(prev) : prev);
+  }
+
+  async function handleOffsetChange(songId, offset) {
+    const before = songs.find(s => s.song_id === songId)?.transpose_offset || 0;
+    patchSongEverywhere(songId, s => applyOffset(s, offset));
+    try {
+      await updateLibraryEntry(songId, { transpose_offset: offset });
+    } catch (err) {
+      patchSongEverywhere(songId, s => applyOffset(s, before));
+      notify(err.message || 'Failed to save transposition');
+    }
+  }
+
+  function handleChartSaved(songId) {
+    patchSongEverywhere(songId, s => ({ ...s, has_chart: true }));
+  }
+
+  function openChords(song) {
+    if (song) setFocusSongId(song.song_id);
   }
 
   async function togglePublic() {
@@ -711,16 +761,7 @@ export default function DashboardPage() {
     } catch { /* silent */ }
   }
 
-  async function saveChordsUrl(chords_url) {
-    if (!selectedSong) return;
-    try {
-      await updateLibraryEntry(selectedSong.song_id, { chords_url });
-      setSongs(prev => prev.map(s => s.song_id === selectedSong.song_id ? { ...s, chords_url } : s));
-      setSelectedSong(prev => prev ? { ...prev, chords_url } : prev);
-    } catch { /* silent */ }
-  }
-
-  // needs_work/work_note/chord_chart_url live on the marketplace `songs` row
+  // needs_work/work_note live on the marketplace `songs` row
   // (shared across everyone who has this song), not on the personal
   // user_library snapshot — so these go through /api/songs, not /api/library.
 
@@ -803,6 +844,7 @@ export default function DashboardPage() {
         setDismissedSug(prev => new Set(prev).add(t.id));
       },
       onOpenDialog: openDialog,
+      onOpenChords: openChords,
     });
     return () => setDashExtras({});
   }, [songs, visibleSuggestions, ppCollapsed, nowPlaying, session]); // eslint-disable-line
@@ -855,7 +897,7 @@ export default function DashboardPage() {
         onPlayNow={() => selectedSong && playSong(selectedSong)}
         onAddToQueue={() => selectedSong && addToQueue(selectedSong)}
         onSaveNotes={saveNotes}
-        onSaveChordsUrl={saveChordsUrl}
+        onOpenChords={openChords}
         onSaveNeedsWork={saveNeedsWork}
         onTogglePublic={togglePublic}
         onEditSong={editSong}
@@ -977,6 +1019,22 @@ export default function DashboardPage() {
         />
       )}
 
+      {/* Focus mode — full-screen chart for any song */}
+      {focusSongId && (() => {
+        const focusSong = songs.find(s => s.song_id === focusSongId)
+          ?? (nowPlaying?.song_id === focusSongId ? nowPlaying : null);
+        return focusSong ? (
+          <FocusMode
+            key={focusSongId}
+            song={focusSong}
+            canEdit={!!user?.is_owner}
+            onClose={() => setFocusSongId(null)}
+            onOffsetChange={handleOffsetChange}
+            onChartSaved={handleChartSaved}
+          />
+        ) : null;
+      })()}
+
       {/* Notification toast */}
       {notifMsg && <div className="notif">{notifMsg}</div>}
 
@@ -1014,10 +1072,10 @@ export default function DashboardPage() {
           <button className="mss-btn" onClick={() => { if (selectedSong) { addToQueue(selectedSong); clearSelectedSong(); } }}>
             + Queue
           </button>
-          {selectedSong?.chords_url && (
-            <a className="mss-btn" href={selectedSong.chords_url} target="_blank" rel="noopener">
+          {selectedSong && (
+            <button className="mss-btn" onClick={() => openChords(selectedSong)}>
               ♩ Chords
-            </a>
+            </button>
           )}
         </div>
       </div>

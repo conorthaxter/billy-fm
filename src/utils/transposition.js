@@ -70,3 +70,23 @@ export const ALL_KEYS = [
   'C','C#','D','Eb','E','F','F#','G','Ab','A','Bb','B',
   'Am','C#m','Dm','Ebm','Em','Fm','F#m','Gm','Abm','Bm','Bbm','Cm',
 ];
+
+/**
+ * transposeKey(key, semitones)
+ * Shifts a key name (major or minor) by a number of semitones.
+ * Returns the key unchanged when the offset is 0 or the key is unrecognised.
+ * e.g. transposeKey('G', 2) → 'A', transposeKey('Em', -1) → 'Ebm'
+ */
+export function transposeKey(key, semitones) {
+  if (!key || !semitones) return key;
+  const idx = keyToSemitone(key);
+  if (idx < 0) return key;
+  const next = (((idx + semitones) % 12) + 12) % 12;
+  return CHROMATIC[next] + (key.endsWith('m') ? 'm' : '');
+}
+
+/** Folds any semitone count into -5..6, matching the server's stored range. */
+export function normalizeOffset(n) {
+  const m = ((n % 12) + 12) % 12;
+  return m > 6 ? m - 12 : m;
+}

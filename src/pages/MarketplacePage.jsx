@@ -84,7 +84,7 @@ function MarketplaceCard({ song, inLibrary, adding, selected, onAdd, onToggleSel
 // ─── Add New Song dialog ──────────────────────────────────────────────────────
 
 function AddSongDialog({ onClose, onAdded }) {
-  const [form, setForm]     = useState({ title: '', artist: '', default_key: '', default_bpm: '', chords_url: '' });
+  const [form, setForm]     = useState({ title: '', artist: '', default_key: '', default_bpm: '' });
   const [genres, setGenres] = useState(new Set());
   const [saving, setSaving] = useState(false);
   const [error,  setError]  = useState('');
@@ -112,7 +112,6 @@ function AddSongDialog({ onClose, onAdded }) {
         artist:      form.artist.trim(),
         default_key: form.default_key || undefined,
         default_bpm: form.default_bpm ? Number(form.default_bpm) : undefined,
-        chords_url:  form.chords_url.trim() || undefined,
         genre:       [...genres],
         tags:        [],
       };
@@ -175,14 +174,6 @@ function AddSongDialog({ onClose, onAdded }) {
             />
           </div>
         </div>
-
-        <label className="dlg-lbl">Chord Chart URL (optional)</label>
-        <input
-          type="url"
-          value={form.chords_url} onChange={e => set('chords_url', e.target.value)}
-          placeholder="https://tabs.ultimate-guitar.com/…"
-          style={inputStyle}
-        />
 
         <label className="dlg-lbl">Genre</label>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 10px', marginBottom: 10 }}>

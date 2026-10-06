@@ -125,15 +125,14 @@ export async function spotifyConfirm(request: AuthRequest, env: Env): Promise<Re
   for (const t of tracks) {
     const title  = t.title.trim();
     const artist = t.artist.trim();
-    const url    = t.spotify_url || chordsUrl(title, artist);
 
     // Upsert into global songs pool
     const songId = crypto.randomUUID();
     await env.DB.prepare(
       `INSERT OR IGNORE INTO songs
-         (id, title, artist, default_key, default_bpm, chords_url, genre, era, tags, added_by)
-       VALUES (?, ?, ?, ?, ?, ?, '[]', NULL, '[]', ?)`,
-    ).bind(songId, title, artist, t.key ?? null, t.bpm ?? null, url, userId).run();
+         (id, title, artist, default_key, default_bpm, genre, era, tags, added_by)
+       VALUES (?, ?, ?, ?, ?, '[]', NULL, '[]', ?)`,
+    ).bind(songId, title, artist, t.key ?? null, t.bpm ?? null, userId).run();
 
     // Get canonical song id (may already exist)
     const existing = await env.DB.prepare(
@@ -145,9 +144,9 @@ export async function spotifyConfirm(request: AuthRequest, env: Env): Promise<Re
     // Add to user library with is_public = 1 (Spotify imports are public)
     const libResult = await env.DB.prepare(
       `INSERT OR IGNORE INTO user_library
-         (user_id, song_id, title, artist, key, bpm, chords_url, genre, era, tags, notes, is_public)
-       VALUES (?, ?, ?, ?, ?, ?, ?, '[]', NULL, '[]', NULL, 1)`,
-    ).bind(userId, canonicalId, title, artist, t.key ?? null, t.bpm ?? null, url).run();
+         (user_id, song_id, title, artist, key, bpm, genre, era, tags, notes, is_public)
+       VALUES (?, ?, ?, ?, ?, ?, '[]', NULL, '[]', NULL, 1)`,
+    ).bind(userId, canonicalId, title, artist, t.key ?? null, t.bpm ?? null).run();
 
     if ((libResult.meta as { changes: number }).changes > 0) imported++;
     else skipped++;
@@ -160,16 +159,11 @@ export async function spotifyConfirm(request: AuthRequest, env: Env): Promise<Re
 // Helpers
 // ---------------------------------------------------------------------------
 
-function chordsUrl(title: string, artist: string): string {
-  return `https://www.google.com/search?q=${encodeURIComponent(`${title} ${artist} chords site:ultimate-guitar.com`)}`;
-}
-
 interface SongInput {
   title: string;
   artist: string;
   key?: string | null;
   bpm?: number | null;
-  chords_url?: string | null;
   notes?: string | null;
 }
 
@@ -210,12 +204,11 @@ export async function importCsv(request: AuthRequest, env: Env): Promise<Respons
     await env.DB.batch(
       chunk.map(s => {
         const id  = crypto.randomUUID();
-        const url = s.chords_url?.startsWith('http') ? s.chords_url : chordsUrl(s.title, s.artist);
         return env.DB.prepare(
           `INSERT OR IGNORE INTO songs
-             (id, title, artist, default_key, default_bpm, chords_url, genre, era, tags, added_by)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        ).bind(id, s.title.trim(), s.artist.trim(), s.key ?? null, s.bpm ?? null, url, '[]', null, '[]', userId);
+             (id, title, artist, default_key, default_bpm, genre, era, tags, added_by)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ).bind(id, s.title.trim(), s.artist.trim(), s.key ?? null, s.bpm ?? null, '[]', null, '[]', userId);
       }),
     );
 
@@ -233,16 +226,15 @@ export async function importCsv(request: AuthRequest, env: Env): Promise<Respons
       .map((s, idx) => {
         const row = idResults[idx]?.results?.[0] as { id: string } | undefined;
         if (!row?.id) return null;
-        const url = s.chords_url?.startsWith('http') ? s.chords_url : chordsUrl(s.title, s.artist);
         return env.DB.prepare(
           `INSERT OR IGNORE INTO user_library
-             (user_id, song_id, title, artist, key, bpm, chords_url, genre, era, tags, notes, is_public)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+             (user_id, song_id, title, artist, key, bpm, genre, era, tags, notes, is_public)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
         ).bind(
           userId, row.id,
           s.title.trim(), s.artist.trim(),
           s.key ?? null, s.bpm ?? null,
-          url, '[]', null, '[]',
+          '[]', null, '[]',
           s.notes ?? null,
         );
       })

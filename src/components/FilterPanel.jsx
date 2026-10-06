@@ -3,56 +3,6 @@ import { keyColor, MAJOR_KEYS_PREVIEW } from '../utils/keyColors';
 import { useSettings } from '../contexts/SettingsContext';
 import { getTransitions, deleteTransition } from '../api/transitions';
 import { ALL_KEYS } from '../utils/transposition';
-import { chordChartUrl } from '../utils/chordChart';
-
-function ChordsLink({ song, onSaveChordsUrl }) {
-  const [editing, setEditing] = useState(false);
-  const [urlInput, setUrlInput] = useState('');
-  const url = song?.chords_url;
-
-  function handleSave() {
-    if (urlInput.trim()) onSaveChordsUrl(urlInput.trim());
-    setEditing(false);
-    setUrlInput('');
-  }
-
-  if (!song) return null;
-
-  // When URL exists, just show the link — editing happens via the Edit song form
-  if (url) {
-    const isSearch = url.includes('google.com/search');
-    return (
-      <a href={url} target="_blank" rel="noopener noreferrer" className="fp-chords-btn">
-        <span className="fp-chords-hotkey">SPACE</span>
-        {isSearch ? 'Find chords on UG ↗' : 'View chords ↗'}
-      </a>
-    );
-  }
-
-  if (editing) {
-    return (
-      <div className="fp-chords-edit">
-        <input
-          type="url"
-          className="fp-chords-input"
-          placeholder="https://tabs.ultimate-guitar.com/…"
-          value={urlInput}
-          onChange={e => setUrlInput(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setEditing(false); }}
-          autoFocus
-        />
-        <button className="fp-btn" onClick={handleSave}>Save</button>
-        <button className="fp-btn" onClick={() => setEditing(false)}>Cancel</button>
-      </div>
-    );
-  }
-
-  return (
-    <button className="fp-chords-btn fp-chords-add" onClick={() => { setUrlInput(''); setEditing(true); }}>
-      + Add chords link
-    </button>
-  );
-}
 
 function NeedsWorkEditor({ song, onSave }) {
   const [note, setNote] = useState(song?.work_note || '');
@@ -251,7 +201,7 @@ export default function FilterPanel({
   onPlayNow,
   onAddToQueue,
   onSaveNotes,
-  onSaveChordsUrl,
+  onOpenChords,
   onSaveNeedsWork,
   onTogglePublic,
   onEditSong,
@@ -281,9 +231,8 @@ export default function FilterPanel({
     setEditForm({
       title:     selectedSong.title     || '',
       artist:    selectedSong.artist    || '',
-      key:       selectedSong.key       || '',
+      key:       selectedSong.key_base ?? selectedSong.key ?? '',
       bpm:       selectedSong.bpm       ? String(selectedSong.bpm) : '',
-      chordsUrl: selectedSong.chords_url || '',
     });
     setEditing(true);
   }
@@ -297,9 +246,6 @@ export default function FilterPanel({
       key:    editForm.key           || undefined,
       bpm:    editForm.bpm ? Number(editForm.bpm) : undefined,
     });
-    if (editForm.chordsUrl.trim() !== (selectedSong.chords_url || '')) {
-      if (editForm.chordsUrl.trim()) onSaveChordsUrl?.(editForm.chordsUrl.trim());
-    }
     setEditing(false);
   }
 
@@ -380,14 +326,6 @@ export default function FilterPanel({
                     placeholder="BPM"
                   />
                 </div>
-                <input
-                  className="fp-edit-input"
-                  style={{ marginTop: 4 }}
-                  type="url"
-                  value={editForm.chordsUrl}
-                  onChange={e => setEditForm(f => ({ ...f, chordsUrl: e.target.value }))}
-                  placeholder="Chords URL (optional)"
-                />
                 <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
                   <button className="fp-btn primary" onClick={saveEdit}>Save</button>
                   <button className="fp-btn" onClick={cancelEdit}>Cancel</button>
@@ -409,6 +347,13 @@ export default function FilterPanel({
                 {selectedSong.bpm && (
                   <span style={{ fontSize: 10, marginLeft: 5 }}>{selectedSong.bpm} BPM</span>
                 )}
+
+                {/* Theme tags — directly under the key chip */}
+                <TagsEditor
+                  tags={selectedSong.tags}
+                  onSave={newTags => onEditSong?.({ tags: newTags })}
+                />
+
                 <div className="fp-actions">
                   <button className="fp-btn" onClick={onAddToQueue}>+ QUEUE</button>
                   <button className="fp-btn primary" onClick={onPlayNow}>
@@ -437,29 +382,15 @@ export default function FilterPanel({
               </>
             )}
 
-            {/* Chords link — full width */}
+            {/* Chords — opens focus mode for the selected song */}
             <div style={{ marginTop: 6 }}>
-              <ChordsLink song={selectedSong} onSaveChordsUrl={onSaveChordsUrl} />
-            </div>
-
-            {/* Chord chart lookup — always shown, independent of the user's own chords_url above */}
-            <div style={{ marginTop: 4 }}>
-              <a
-                href={chordChartUrl(selectedSong)}
-                target="_blank"
-                rel="noopener"
-                className="fp-chords-btn"
-              >chords ↗</a>
+              <button className="fp-chords-btn" onClick={() => onOpenChords?.(selectedSong)}>
+                Open chords
+              </button>
             </div>
 
             {/* Needs work */}
             <NeedsWorkEditor song={selectedSong} onSave={onSaveNeedsWork} />
-
-            {/* Theme tags */}
-            <TagsEditor
-              tags={selectedSong.tags}
-              onSave={newTags => onEditSong?.({ tags: newTags })}
-            />
 
             {/* Notes */}
             <div style={{ marginTop: 8 }}>

@@ -21,6 +21,8 @@ import {
   removeFromLibrary,
   createPrivateSong,
   importAllSongs,
+  getChart,
+  putChart,
 } from './routes/library';
 import {
   listPlaylists,
@@ -124,6 +126,8 @@ router.patch('/api/songs/:id',   withAuth, patchSong);
 router.get('/api/library',              withAuth, getLibrary);
 router.post('/api/library/import-all', withAuth, importAllSongs);
 router.post('/api/library/private',    withAuth, createPrivateSong);
+router.get('/api/library/:songId/chart', withAuth, getChart);
+router.put('/api/library/:songId/chart', withAuth, putChart);
 router.post('/api/library/:songId',    withAuth, addToLibrary);
 router.patch('/api/library/:songId',   withAuth, patchLibraryEntry);
 router.delete('/api/library/:songId',  withAuth, removeFromLibrary);

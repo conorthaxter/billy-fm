@@ -15,7 +15,6 @@ const FIELD_OPTIONS = [
   { value: 'artist',     label: 'Artist' },
   { value: 'key',        label: 'Key' },
   { value: 'bpm',        label: 'BPM' },
-  { value: 'chords_url', label: 'Chords URL' },
   { value: 'notes',      label: 'Notes' },
   { value: 'skip',       label: '— skip —' },
 ];
@@ -34,31 +33,27 @@ function detectColumns(rows) {
     const vals = dataRows.map(r => (r[c] || '').trim());
     const nonEmpty = vals.filter(Boolean);
 
-    scores[c] = { title: 0, artist: 0, key: 0, bpm: 0, chords_url: 0, notes: 0 };
+    scores[c] = { title: 0, artist: 0, key: 0, bpm: 0, notes: 0 };
 
     // Header name bonuses
     if (['SONG','TITLE','SONG TITLE','NAME'].includes(hdr)) scores[c].title += 10;
     if (['ARTIST','PERFORMER','BAND','BY'].includes(hdr))   scores[c].artist += 10;
     if (['KEY','MUSICAL KEY'].includes(hdr))                scores[c].key += 10;
     if (['BPM','TEMPO','BEATS PER MINUTE'].includes(hdr))   scores[c].bpm += 10;
-    if (['CHORDS','CHORD','CHORD URL','TABS'].includes(hdr)) scores[c].chords_url += 10;
     if (['NOTES','NOTE','COMMENTS','COMMENT'].includes(hdr)) scores[c].notes += 10;
 
     // Data heuristics
     const isKey = v => /^[A-G][#b]?m?$/.test(v);
     const isBpm = v => { const n = parseFloat(v); return !isNaN(n) && n >= 40 && n <= 300; };
-    const isUrl = v => /^https?:\/\//i.test(v);
 
     const ne = nonEmpty.length || 1;
     const keyHits = nonEmpty.filter(isKey).length / ne;
     const bpmHits = nonEmpty.filter(isBpm).length / ne;
-    const urlHits = nonEmpty.filter(isUrl).length / ne;
     const avgLen  = nonEmpty.reduce((s, v) => s + v.length, 0) / ne;
     const uniq    = new Set(nonEmpty).size / ne;
 
     if (keyHits > 0.5) scores[c].key += 8;
     if (bpmHits > 0.5) scores[c].bpm += 8;
-    if (urlHits > 0.5) scores[c].chords_url += 8;
     if (avgLen > 4 && avgLen < 60 && uniq > 0.75) scores[c].title  += 4;
     if (avgLen > 3 && avgLen < 35 && uniq < 0.75) scores[c].artist += 3;
     if (avgLen > 25)                               scores[c].notes  += 3;
@@ -83,7 +78,7 @@ function mapRowsToSongs(rows, mapping) {
   const songs = [];
   for (let i = 1; i < rows.length; i++) {
     const r    = rows[i];
-    const song = { title: '', artist: '', key: null, bpm: null, chords_url: null, notes: null };
+    const song = { title: '', artist: '', key: null, bpm: null, notes: null };
     for (const [colIdx, field] of Object.entries(mapping)) {
       if (field === 'skip') continue;
       const val = (r[Number(colIdx)] || '').trim() || null;
@@ -100,7 +95,7 @@ function mapRowsToSongs(rows, mapping) {
 // ─── Tab: Add One Song ────────────────────────────────────────────────────────
 
 function AddSongTab({ onClose, onComplete }) {
-  const [form,      setForm]     = useState({ title: '', artist: '', key: '', bpm: '', chords_url: '', notes: '' });
+  const [form,      setForm]     = useState({ title: '', artist: '', key: '', bpm: '', notes: '' });
   const [genres,    setGenres]   = useState(new Set());
   const [isPublic,  setIsPublic] = useState(true);
   const [saving,    setSaving]   = useState(false);
@@ -122,8 +117,6 @@ function AddSongTab({ onClose, onComplete }) {
     try {
       const title  = form.title.trim();
       const artist = form.artist.trim();
-      const autoChordUrl = form.chords_url.trim() ||
-        `https://www.google.com/search?q=${encodeURIComponent(title)}+${encodeURIComponent(artist)}+chords`;
 
       if (isPublic) {
         // Public: add to global marketplace + user library
@@ -132,7 +125,6 @@ function AddSongTab({ onClose, onComplete }) {
           artist,
           default_key: form.key    || undefined,
           default_bpm: form.bpm   ? Number(form.bpm) : undefined,
-          chords_url:  autoChordUrl,
           genre:       [...genres],
           tags:        [],
         };
@@ -145,7 +137,6 @@ function AddSongTab({ onClose, onComplete }) {
           artist,
           key:        form.key || undefined,
           bpm:        form.bpm ? Number(form.bpm) : undefined,
-          chords_url: autoChordUrl,
           notes:      form.notes.trim() || undefined,
           genre:      [...genres],
           tags:       [],
@@ -183,9 +174,6 @@ function AddSongTab({ onClose, onComplete }) {
           <input type="number" min="40" max="300" value={form.bpm} onChange={e => set('bpm', e.target.value)} placeholder="120" style={inp} />
         </div>
       </div>
-
-      <label className="dlg-lbl">Chord Chart URL (optional)</label>
-      <input type="url" value={form.chords_url} onChange={e => set('chords_url', e.target.value)} placeholder="https://tabs.ultimate-guitar.com/…" style={inp} />
 
       <label className="dlg-lbl">Notes</label>
       <textarea value={form.notes} onChange={e => set('notes', e.target.value)} placeholder="Any notes about this song…" style={{ ...inp, resize: 'vertical' }} rows={2} />

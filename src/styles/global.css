@@ -885,9 +885,6 @@ body.dark .fp-footer-tip:hover { color: #f88; }
   background: #fff;
 }
 
-/* Legacy chords link (replaced by fp-chords-btn) */
-.fp-chords-link { display: inline-block; font-size: 10px; color: #555; text-decoration: underline; cursor: pointer; background: none; border: none; padding: 0; font-family: var(--font); }
-.fp-chords-link:hover { color: #000; }
 /* Full-width chords button */
 .fp-chords-btn {
   display: flex;
@@ -907,19 +904,6 @@ body.dark .fp-footer-tip:hover { color: #f88; }
   box-sizing: border-box;
 }
 .fp-chords-btn:hover { background: #000; color: #fff; }
-.fp-chords-hotkey {
-  font-family: var(--mono);
-  font-size: 8px;
-  background: #eee;
-  padding: 1px 4px;
-  border: 1px solid #ccc;
-  color: #555;
-}
-.fp-chords-btn:hover .fp-chords-hotkey { background: #333; border-color: #333; color: #aaa; }
-.fp-chords-add { background: #fff; border-style: dashed; color: #aaa; }
-.fp-chords-add:hover { background: #f5f5f5; color: #000; }
-.fp-chords-edit { display: flex; gap: 4px; margin-top: 2px; }
-.fp-chords-input { font-family: var(--font); font-size: 10px; border: 1px solid #000; padding: 2px 4px; outline: none; flex: 1; min-width: 0; background: #fff; }
 .fp-notes { font-family: var(--font); font-size: 11px; border: 1px solid #ddd; padding: 4px 6px; outline: none; width: 100%; resize: vertical; background: #fff; color: #000; line-height: 1.4; }
 .fp-notes:focus { border-color: #000; }
 
@@ -1965,11 +1949,8 @@ body.dark .suggest-add, body.dark .suggest-dismiss { border-color: #333; color: 
 body.dark .suggest-add:hover, body.dark .suggest-dismiss:hover { border-color: #ddd; color: #ddd; }
 body.dark .fp-mode-btn    { background: #111; border-color: #333; color: #555; }
 body.dark .fp-mode-btn:hover, body.dark .fp-mode-btn.on { background: #ddd; border-color: #ddd; color: #111; }
-body.dark .fp-chords-link { color: #666; }
-body.dark .fp-chords-link:hover { color: #ccc; }
 body.dark .fp-chords-btn { background: #111; border-color: #444; color: #ccc; }
 body.dark .fp-chords-btn:hover { background: #eee; color: #000; }
-body.dark .fp-chords-input { background: #1a1a1a; border-color: #444; color: #ddd; }
 body.dark .fp-notes       { background: #1a1a1a; border-color: #333; color: #ddd; }
 body.dark .fp-notes:focus  { border-color: #666; }
 body.dark .fp-sec       { border-color: #2a2a2a; }
@@ -2720,6 +2701,8 @@ body.dark .sp-result.selected { background: #0d2137; }
     border: 1px solid #555;
     padding: 3px 7px;
     text-decoration: none;
+    background: none;
+    cursor: pointer;
   }
   .mnp-queue-btn {
     font-family: var(--mono);

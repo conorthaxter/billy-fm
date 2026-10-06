@@ -144,7 +144,7 @@ function PlaylistDetail({
           {songs.map((song, i) => {
             const [bg, fg] = song.key ? keyColor(song.key, palette) : ['#e0e0e0', '#000'];
             const isMultiSel = multiSelected.has(song.song_id);
-            const s = { song_id: song.song_id, title: song.title, artist: song.artist, key: song.key, bpm: song.bpm, chords_url: song.chords_url };
+            const s = { song_id: song.song_id, title: song.title, artist: song.artist, key: song.key, bpm: song.bpm };
             return (
               <div
                 key={song.song_id}
