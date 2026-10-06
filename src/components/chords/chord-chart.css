@@ -78,7 +78,14 @@ body.dark .cc-chart, body.dark .cc-focus, body.dark .cc-preview, body.dark .righ
   background: var(--cc-surface);
   color: var(--cc-ink);
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+}
+.cc-focus-main { flex: 2 1 0; min-width: 0; display: flex; flex-direction: column; position: relative; }
+.cc-focus-lib { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; border-left: 1px solid var(--cc-ink); }
+.cc-focus-lib-body { flex: 1; overflow-y: auto; padding: var(--cc-pad); }
+@media (max-width: 700px) {
+  .cc-focus { flex-direction: column; }
+  .cc-focus-lib { border-left: 0; border-top: 1px solid var(--cc-ink); }
 }
 .cc-focus-bar {
   display: flex;

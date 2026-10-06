@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import ChordChartView from './ChordChartView';
 import ChordEditorBar from './ChordEditorBar';
 import ImportChordPro from './ImportChordPro';
@@ -8,11 +8,11 @@ import { buildDisplayModel, serializeModel } from '../../utils/chordPro';
 import { normalizeOffset } from '../../utils/transposition';
 import { useSettings } from '../../contexts/SettingsContext';
 import { keyColor } from '../../utils/keyColors';
+import SongCell from '../SongCell';
 
-// Full-screen chart. Takes the song as a parameter (not always now-playing).
-// Only the owner account sees the pencil / import; everyone else gets the chart
-// and the transpose stepper.
-export default function FocusMode({ song, canEdit, onClose, onOffsetChange, onChartSaved }) {
+// Left pane: the chart for one song. Only the owner account sees the pencil /
+// import; everyone else gets the chart and the transpose stepper.
+function ChartPane({ song, canEdit, onClose, onOffsetChange, onChartSaved, dirtyRef }) {
   const { palette } = useSettings();
   const { chart, loading, error } = useChart(song.song_id);
   const offset = song.transpose_offset || 0;
@@ -24,6 +24,9 @@ export default function FocusMode({ song, canEdit, onClose, onOffsetChange, onCh
   const [slot, setSlot]         = useState(null);   // { idx, pos, chord }
   const [saving, setSaving]     = useState(false);
   const [saveError, setSaveError] = useState('');
+
+  // Lets the library pane ask whether switching songs would lose edits.
+  dirtyRef.current = editing && dirty;
 
   const hasChart = !!chart;
   const [bg, fg] = keyColor(song.key, palette);
@@ -111,7 +114,7 @@ export default function FocusMode({ song, canEdit, onClose, onOffsetChange, onCh
   }), [song.song_id, offset, onOffsetChange]);
 
   return (
-    <div className="cc-focus" role="dialog" aria-label={`Chords for ${song.title}`}>
+    <div className="cc-focus-main">
       <div className="cc-focus-bar">
         <div className="cc-focus-title">
           <b>{song.title}</b>
@@ -177,6 +180,71 @@ export default function FocusMode({ song, canEdit, onClose, onOffsetChange, onCh
           <ImportChordPro hasChart={hasChart} onImport={importChart} onCancel={() => setImporting(false)} />
         </div>
       )}
+    </div>
+  );
+}
+
+// Full-screen focus mode: chart for the selected song on the left (2/3), the
+// library as tiles on the right. Picking a tile only selects it — it never
+// changes Now Playing.
+export default function FocusMode({ song, songs, nowPlaying, canEdit, onClose, onSelectSong, onAddToQueue, onOffsetChange, onChartSaved }) {
+  const dirtyRef = useRef(false);
+
+  function select(next) {
+    if (song && next.song_id === song.song_id) return;
+    if (dirtyRef.current && !window.confirm('Discard your chord changes?')) return;
+    onSelectSong(next);
+  }
+
+  useEffect(() => {
+    if (song) return undefined;   // ChartPane handles Escape when a chart is open
+    function onKey(e) { if (e.key === 'Escape') onClose(); }
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [song, onClose]);
+
+  return (
+    <div className="cc-focus" role="dialog" aria-label="Chords">
+      {song ? (
+        <ChartPane
+          key={song.song_id}
+          song={song}
+          canEdit={canEdit}
+          onClose={onClose}
+          onOffsetChange={onOffsetChange}
+          onChartSaved={onChartSaved}
+          dirtyRef={dirtyRef}
+        />
+      ) : (
+        <div className="cc-focus-main">
+          <div className="cc-focus-bar">
+            <div className="cc-focus-title" />
+            <div className="cc-focus-actions">
+              <button type="button" className="cc-btn" onClick={onClose} title="Close (Esc)">✕</button>
+            </div>
+          </div>
+          <div className="cc-focus-body"><div className="cc-msg">No song selected. Pick one from the library.</div></div>
+        </div>
+      )}
+
+      <div className="cc-focus-lib">
+        <div className="cc-preview-hdr"><span>LIBRARY</span></div>
+        <div className="cc-focus-lib-body">
+          <div className="song-grid">
+            {songs.map(s => (
+              <SongCell
+                key={s.song_id}
+                song={s}
+                isNowPlaying={nowPlaying?.song_id === s.song_id}
+                isSelected={song?.song_id === s.song_id}
+                onSelect={() => select(s)}
+                onDblClick={() => {}}
+                onAddToQueue={() => onAddToQueue?.(s)}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -399,11 +399,12 @@ export default function RightPanel({
   onReorderHistory,
   onSelectNP,
   onOpenChords,
+  selectedSongId,
 }) {
-  // Chord preview shows only for a now-playing song that has a chart. Prefer the
-  // live library row (current transpose offset) over the copy held by Now Playing.
-  const liveNP = nowPlaying ? (songs.find(s => s.song_id === nowPlaying.song_id) ?? nowPlaying) : null;
-  const showPreview = !!liveNP?.has_chart;
+  // Chord preview shows only for the selected song, and only if it has a chart.
+  // Now Playing is for queuing and plays no part here.
+  const chordSong = selectedSongId ? (songs.find(s => s.song_id === selectedSongId) ?? null) : null;
+  const showPreview = !!chordSong?.has_chart;
 
   // Previously Played starts collapsed to one row whenever the preview opens.
   const [ppExpanded, setPpExpanded] = useState(false);
@@ -457,8 +458,8 @@ export default function RightPanel({
       />
       {showPreview && (
         <ChordPreview
-          song={liveNP}
-          onOpenFocus={onOpenChords ? () => onOpenChords(liveNP) : undefined}
+          song={chordSong}
+          onOpenFocus={onOpenChords ? () => onOpenChords(chordSong) : undefined}
         />
       )}
     </div>

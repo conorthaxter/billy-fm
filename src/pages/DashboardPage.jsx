@@ -187,7 +187,7 @@ export default function DashboardPage() {
   const [importingDefault, setImportingDefault] = useState(false);
   const [newSetNameOpen,  setNewSetNameOpen]  = useState(false);
   const [linkingMode,  setLinkingMode]  = useState(false);
-  const [focusSongId,  setFocusSongId]  = useState(null);
+  const [focusOpen,  setFocusOpen]  = useState(false);
   const [suggestions,  setSuggestions]  = useState([]);
   const [dismissedSug, setDismissedSug] = useState(new Set());
   const [notifMsg,     notify]          = useNotify();
@@ -293,7 +293,7 @@ export default function DashboardPage() {
   useEffect(() => {
     function onKey(e) {
       // Focus mode owns the keyboard while it is open
-      if (focusSongId) return;
+      if (focusOpen) return;
 
       // ESC — dismiss layers in order
       if (e.key === 'Escape') {
@@ -341,12 +341,10 @@ export default function DashboardPage() {
         return;
       }
 
-      // SPACE — focus mode for the now-playing song
+      // SPACE — focus mode for the selected song (opens even with nothing selected)
       if (e.key === ' ') {
-        if (nowPlaying) {
-          e.preventDefault();
-          setFocusSongId(nowPlaying.song_id);
-        }
+        e.preventDefault();
+        setFocusOpen(true);
         return;
       }
 
@@ -406,7 +404,7 @@ export default function DashboardPage() {
     }
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [dlg, searchOpen, nowPlaying, selectedSong, cursorSong, queue, tileZoom, focusSongId]); // eslint-disable-line
+  }, [dlg, searchOpen, nowPlaying, selectedSong, cursorSong, queue, tileZoom, focusOpen]); // eslint-disable-line
 
   // ── Computed faded IDs ────────────────────────────────────────────────────
 
@@ -747,8 +745,10 @@ export default function DashboardPage() {
     patchSongEverywhere(songId, s => ({ ...s, has_chart: true }));
   }
 
+  // Opens focus mode on `song` (selecting it first); with no song, keeps the current selection.
   function openChords(song) {
-    if (song) setFocusSongId(song.song_id);
+    if (song) setSelectedSong(songs.find(s => s.song_id === song.song_id) ?? song);
+    setFocusOpen(true);
   }
 
   async function togglePublic() {
@@ -829,6 +829,7 @@ export default function DashboardPage() {
   useEffect(() => {
     setDashExtras({
       songs,
+      selectedSongId: selectedSong?.song_id ?? null,
       suggestions: visibleSuggestions,
       ppCollapsed,
       onTogglePP:  () => setPpCollapsed(c => !c),
@@ -847,7 +848,7 @@ export default function DashboardPage() {
       onOpenChords: openChords,
     });
     return () => setDashExtras({});
-  }, [songs, visibleSuggestions, ppCollapsed, nowPlaying, session]); // eslint-disable-line
+  }, [songs, visibleSuggestions, ppCollapsed, nowPlaying, session, selectedSong?.song_id]); // eslint-disable-line
 
 
   return (
@@ -1019,21 +1020,20 @@ export default function DashboardPage() {
         />
       )}
 
-      {/* Focus mode — full-screen chart for any song */}
-      {focusSongId && (() => {
-        const focusSong = songs.find(s => s.song_id === focusSongId)
-          ?? (nowPlaying?.song_id === focusSongId ? nowPlaying : null);
-        return focusSong ? (
-          <FocusMode
-            key={focusSongId}
-            song={focusSong}
-            canEdit={!!user?.is_owner}
-            onClose={() => setFocusSongId(null)}
-            onOffsetChange={handleOffsetChange}
-            onChartSaved={handleChartSaved}
-          />
-        ) : null;
-      })()}
+      {/* Focus mode — chart for the selected song + library tiles */}
+      {focusOpen && (
+        <FocusMode
+          song={selectedSong}
+          songs={songs}
+          nowPlaying={nowPlaying}
+          canEdit={!!user?.is_owner}
+          onClose={() => setFocusOpen(false)}
+          onSelectSong={song => { setMultiSelected([]); setSelectedSong(song); }}
+          onAddToQueue={addToQueue}
+          onOffsetChange={handleOffsetChange}
+          onChartSaved={handleChartSaved}
+        />
+      )}
 
       {/* Notification toast */}
       {notifMsg && <div className="notif">{notifMsg}</div>}

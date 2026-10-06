@@ -203,6 +203,7 @@ function GlobalRightPanel() {
     onAddSuggestionToQueue = () => {},
     onOpenDialog,
     onOpenChords,
+    selectedSongId = null,
   } = dashExtras;
 
   function handleClearHistory() {
@@ -255,6 +256,7 @@ function GlobalRightPanel() {
       onReorderHistory={reorderHistory}
       onSelectNP={onSelectSong}
       onOpenChords={onOpenChords}
+      selectedSongId={selectedSongId}
     />
   );
 }
