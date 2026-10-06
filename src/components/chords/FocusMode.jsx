@@ -208,12 +208,16 @@ export default function FocusMode({ song, songs, nowPlaying, canEdit, onClose, o
     onSelectSong(next);
   }
 
-  // "/" jumps to search; Tab ripples the queue (next song becomes Now Playing and selected).
+  // Space closes; "/" jumps to search; Tab ripples the queue (next song becomes Now Playing and selected).
   // Both are ignored while typing in a field.
   useEffect(() => {
     function onKey(e) {
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) return;
-      if (e.key === '/') {
+      if (e.key === ' ') {
+        e.preventDefault();
+        if (dirtyRef.current && !window.confirm('Discard your chord changes?')) return;
+        onClose();
+      } else if (e.key === '/') {
         e.preventDefault();
         searchRef.current?.focus();
       } else if (e.key === 'Tab') {
@@ -224,7 +228,7 @@ export default function FocusMode({ song, songs, nowPlaying, canEdit, onClose, o
     }
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [onPlayNext]);
+  }, [onPlayNext, onClose]);
 
   function onSearchKeyDown(e) {
     if (e.key === 'Escape') {
