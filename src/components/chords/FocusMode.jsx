@@ -10,9 +10,14 @@ import { useSettings } from '../../contexts/SettingsContext';
 import { keyColor } from '../../utils/keyColors';
 import SongCell from '../SongCell';
 
+// Same range and clamping as the tile zoom on the main dashboard.
+const ZOOM_MIN = 0.6;
+const ZOOM_MAX = 1.8;
+const ZOOM_KEY = 'bfm_chart_zoom';
+
 // Left pane: the chart for one song. Only the owner account sees the pencil /
 // import; everyone else gets the chart and the transpose stepper.
-function ChartPane({ song, canEdit, onClose, onOffsetChange, onChartSaved, dirtyRef }) {
+function ChartPane({ song, canEdit, onClose, onOffsetChange, onChartSaved, dirtyRef, zoom, onZoomChange }) {
   const { palette } = useSettings();
   const { chart, loading, error } = useChart(song.song_id);
   const offset = song.transpose_offset || 0;
@@ -114,7 +119,7 @@ function ChartPane({ song, canEdit, onClose, onOffsetChange, onChartSaved, dirty
   }), [song.song_id, offset, onOffsetChange]);
 
   return (
-    <div className="cc-focus-main">
+    <div className="cc-focus-main" style={{ '--cc-zoom': zoom }}>
       <div className="cc-focus-bar">
         <div className="cc-focus-title">
           <b>{song.title}</b>
@@ -125,6 +130,19 @@ function ChartPane({ song, canEdit, onClose, onOffsetChange, onChartSaved, dirty
           <button type="button" className="cc-btn" onClick={stepper.down} disabled={editing} title="Down a semitone">♭</button>
           <span className="cc-key" style={{ background: bg, color: fg }}>{shownKey}</span>
           <button type="button" className="cc-btn" onClick={stepper.up} disabled={editing} title="Up a semitone">♯</button>
+        </div>
+
+        <div className="zoom-controls">
+          <button className="zoom-btn" onClick={() => onZoomChange(zoom - 0.1)} title="Text smaller">−</button>
+          <input
+            type="range"
+            className="zoom-slider"
+            min={ZOOM_MIN} max={ZOOM_MAX} step={0.05}
+            value={zoom}
+            onChange={e => onZoomChange(parseFloat(e.target.value))}
+            title={`Text size: ${Math.round(zoom * 100)}%`}
+          />
+          <button className="zoom-btn" onClick={() => onZoomChange(zoom + 0.1)} title="Text larger">+</button>
         </div>
 
         <div className="cc-focus-actions">
@@ -189,6 +207,17 @@ function ChartPane({ song, canEdit, onClose, onOffsetChange, onChartSaved, dirty
 // changes Now Playing.
 export default function FocusMode({ song, songs, nowPlaying, canEdit, onClose, onSelectSong, onAddToQueue, onPlayNext, onOffsetChange, onChartSaved }) {
   const dirtyRef = useRef(false);
+
+  const [zoom, setZoom] = useState(() => {
+    try { const v = parseFloat(localStorage.getItem(ZOOM_KEY)); return v ? v : 1; }
+    catch { return 1; }
+  });
+  function handleZoomChange(z) {
+    const clamped = Math.round(Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z)) * 100) / 100;
+    setZoom(clamped);
+    try { localStorage.setItem(ZOOM_KEY, clamped); } catch { /* ignore */ }
+  }
+
   const searchRef = useRef(null);
   const [query, setQuery] = useState('');
 
@@ -261,6 +290,8 @@ export default function FocusMode({ song, songs, nowPlaying, canEdit, onClose, o
           onOffsetChange={onOffsetChange}
           onChartSaved={onChartSaved}
           dirtyRef={dirtyRef}
+          zoom={zoom}
+          onZoomChange={handleZoomChange}
         />
       ) : (
         <div className="cc-focus-main">

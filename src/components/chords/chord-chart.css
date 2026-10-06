@@ -1,7 +1,7 @@
 /* Chord chart components. Custom properties are scoped to these components
    (--cc-*) on top of the two global tokens --mono and --font; global.css is untouched. */
 
-.cc-chart, .cc-focus, .cc-preview, .right-panel {
+.cc-focus, .cc-preview, .right-panel {
   --cc-chord-font: var(--mono);
   --cc-lyric-font: var(--font);
   --cc-label-font: var(--font);
@@ -19,12 +19,12 @@
   --cc-queue-row: 40px;
   --cc-queue-pad: 4px;
 }
-body.dark .cc-chart, body.dark .cc-focus, body.dark .cc-preview, body.dark .right-panel {
+body.dark .cc-focus, body.dark .cc-preview, body.dark .right-panel {
   --cc-ink: #d4c8f0;
 }
 
 /* ── Chart ─────────────────────────────────────────────────── */
-.cc-chart { font-family: var(--cc-lyric-font); font-size: var(--cc-size); line-height: 1.3; }
+.cc-chart { font-family: var(--cc-lyric-font); font-size: calc(var(--cc-size) * var(--cc-zoom, 1)); line-height: 1.3; }
 .cc-line { margin-bottom: var(--cc-line-gap); }
 .cc-grp { display: inline-block; vertical-align: top; white-space: pre; }
 .cc-chord {
