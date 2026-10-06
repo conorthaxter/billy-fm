@@ -30,21 +30,20 @@ export function parseCSV(text) {
  * Mirrors the original app's rowsToSongs, adapted for the API schema.
  *
  * Returned shape per song:
- *   { title, artist, key, bpm, chords_url, notes }
+ *   { title, artist, key, bpm, notes }
  */
 export function rowsToSongs(rows) {
   if (rows.length < 2) return [];
 
   const hdr = rows[0].map(h => (h || '').trim().toUpperCase().replace(/\s+/g, ' '));
 
-  let songC = -1, artistC = -1, keyC = -1, chordsC = -1;
+  let songC = -1, artistC = -1, keyC = -1;
   const notesC = [];
 
   hdr.forEach((h, i) => {
     if (songC   < 0 && (h === 'SONG' || h === 'TITLE' || h === 'SONG TITLE' || h === 'NAME')) songC = i;
     if (artistC < 0 && h === 'ARTIST')                   artistC = i;
     if (keyC    < 0 && h === 'KEY')                       keyC    = i;
-    if (chordsC < 0 && (h === 'CHORDS' || h === 'CHORD')) chordsC = i;
     if (h.startsWith('NOTES') || h === 'NOTE')            notesC.push(i);
   });
 
@@ -55,7 +54,6 @@ export function rowsToSongs(rows) {
     songC   = off;
     artistC = off + 1;
     keyC    = off + 2;
-    chordsC = off + 3;
     if (!notesC.length) { notesC.push(off + 4); notesC.push(off + 5); }
   }
 
@@ -67,7 +65,6 @@ export function rowsToSongs(rows) {
 
     const artist    = (r[artistC]  || '').trim();
     const key       = (r[keyC]     || '').trim() || null;
-    const rawChords = (r[chordsC]  || '').trim();
 
     // notes1 / notes2 — combine non-URL text notes
     const isUrl = s => /^https?:\/\//i.test(s);
@@ -75,24 +72,11 @@ export function rowsToSongs(rows) {
       .map(c => (r[c] || '').trim())
       .filter(n => n && !isUrl(n));
 
-    // chords_url: prefer the chords column if it's a URL,
-    // then fall back to any URL found in the notes columns
-    let chordsUrl = null;
-    if (isUrl(rawChords)) {
-      chordsUrl = rawChords;
-    } else {
-      for (const c of notesC) {
-        const v = (r[c] || '').trim();
-        if (isUrl(v)) { chordsUrl = v; break; }
-      }
-    }
-
     songs.push({
       title,
       artist,
       key,
       bpm:       null,   // enriched client-side after import
-      chords_url: chordsUrl,
       notes:     noteTexts.join('\n') || null,
     });
   }

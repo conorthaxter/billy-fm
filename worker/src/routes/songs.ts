@@ -23,10 +23,6 @@ function shapeSong(row: Record<string, unknown>) {
   };
 }
 
-function chordsUrl(title: string, artist: string): string {
-  return `https://www.google.com/search?q=${encodeURIComponent(`${title} ${artist} chords site:ultimate-guitar.com`)}`;
-}
-
 // ---------------------------------------------------------------------------
 // GET /api/songs
 // ---------------------------------------------------------------------------
@@ -164,7 +160,6 @@ export async function createSong(request: AuthRequest, env: Env): Promise<Respon
     artist?: string;
     default_key?: string;
     default_bpm?: number;
-    chords_url?: string;
     genre?: string[];
     tags?: string[];
     era?: string;
@@ -189,11 +184,10 @@ export async function createSong(request: AuthRequest, env: Env): Promise<Respon
   const id        = crypto.randomUUID();
   const genreJson = JSON.stringify(body.genre ?? []);
   const tagsJson  = JSON.stringify(body.tags  ?? []);
-  const url       = body.chords_url?.trim() || chordsUrl(title, artist);
 
   await env.DB.prepare(
-    `INSERT INTO songs (id, title, artist, default_key, default_bpm, chords_url, genre, era, tags, added_by)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO songs (id, title, artist, default_key, default_bpm, genre, era, tags, added_by)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   )
     .bind(
       id,
@@ -201,7 +195,6 @@ export async function createSong(request: AuthRequest, env: Env): Promise<Respon
       artist,
       body.default_key ?? null,
       body.default_bpm ?? null,
-      url,
       genreJson,
       body.era ?? null,
       tagsJson,
@@ -239,7 +232,6 @@ export async function patchSong(request: AuthRequest, env: Env): Promise<Respons
     artist?: string;
     default_key?: string;
     default_bpm?: number;
-    chords_url?: string;
     genre?: string[];
     tags?: string[];
     era?: string;
@@ -259,7 +251,6 @@ export async function patchSong(request: AuthRequest, env: Env): Promise<Respons
   if (body.artist      !== undefined) { sets.push('artist = ?');      values.push(body.artist.trim()); }
   if (body.default_key !== undefined) { sets.push('default_key = ?'); values.push(body.default_key); }
   if (body.default_bpm !== undefined) { sets.push('default_bpm = ?'); values.push(body.default_bpm); }
-  if (body.chords_url  !== undefined) { sets.push('chords_url = ?');  values.push(body.chords_url); }
   if (body.genre       !== undefined) { sets.push('genre = ?');       values.push(JSON.stringify(body.genre)); }
   if (body.tags        !== undefined) { sets.push('tags = ?');        values.push(JSON.stringify(body.tags)); }
   if (body.era         !== undefined) { sets.push('era = ?');         values.push(body.era); }

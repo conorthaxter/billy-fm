@@ -216,9 +216,10 @@ export async function handleLogout(
 // GET /auth/me — returns current user (withAuth middleware runs first)
 // ---------------------------------------------------------------------------
 
-export function handleMe(request: AuthRequest): Response {
+export function handleMe(request: AuthRequest, env: Env): Response {
   if (!request.user) return error(401, { error: 'Unauthorized' });
-  return json(request.user);
+  const isOwner = !!env.ARTIST_EMAIL && request.user.email.toLowerCase() === env.ARTIST_EMAIL.toLowerCase();
+  return json({ ...request.user, is_owner: isOwner });
 }
 
 // ---------------------------------------------------------------------------
@@ -269,5 +270,6 @@ export async function handlePatchMe(request: AuthRequest, env: Env): Promise<Res
     .bind(user.id)
     .first<Record<string, unknown>>();
 
-  return json(updated!);
+  const isOwner = !!env.ARTIST_EMAIL && user.email.toLowerCase() === env.ARTIST_EMAIL.toLowerCase();
+  return json({ ...updated!, is_owner: isOwner });
 }

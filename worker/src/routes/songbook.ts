@@ -27,7 +27,7 @@ async function getPublicLibrary(
   if (!user) return error(404, { error: 'User not found' });
 
   const rows = await env.DB.prepare(
-    `SELECT ul.song_id, ul.title, ul.artist, ul.key, ul.bpm, ul.tags, ul.genre, s.wedding_rank, s.wedding_moment
+    `SELECT ul.song_id, ul.title, ul.artist, ul.key, ul.bpm, ul.tags, ul.genre, ul.era, s.wedding_rank, s.wedding_moment
      FROM user_library ul
      LEFT JOIN songs s ON s.id = ul.song_id
      WHERE ul.user_id = ? AND ul.is_public = 1 AND (s.needs_work IS NULL OR s.needs_work = 0)
@@ -42,6 +42,7 @@ async function getPublicLibrary(
       bpm: number | null;
       tags: string | null;
       genre: string | null;
+      era: string | null;
       wedding_rank: number | null;
       wedding_moment: string | null;
     }>();
@@ -54,6 +55,7 @@ async function getPublicLibrary(
     bpm: row.bpm ?? null,
     tags: parseJsonField(row.tags),
     genre: parseJsonField(row.genre),
+    era: row.era ?? null,
     wedding_rank: row.wedding_rank ?? null,
     wedding_moment: row.wedding_moment ?? null,
   }));

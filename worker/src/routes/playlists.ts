@@ -168,7 +168,6 @@ export async function getPlaylist(request: AuthRequest, env: Env): Promise<Respo
             COALESCE(ul.artist,     s.artist)      AS artist,
             COALESCE(ul.key,        s.default_key) AS key,
             COALESCE(ul.bpm,        s.default_bpm) AS bpm,
-            COALESCE(ul.chords_url, s.chords_url)  AS chords_url,
             COALESCE(ul.genre,      s.genre)       AS genre,
             COALESCE(ul.era,        s.era)         AS era,
             COALESCE(ul.tags,       s.tags)        AS tags,

@@ -49,6 +49,8 @@ export function getSorted(songs, sortBy, shuffleOrder) {
  * Returns a Set of song_ids that should be FADED (not matching).
  * Returns null when nothing should be faded (no filters active, no search).
  */
+// Note: `key` on each song is the preferred key (stored base + transpose offset),
+// so Match Filters compare transposed keys, not the original.
 export function computeFadedIds(songs, selectedSong, filters, filterMode, searchQuery, playHistory) {
   const anyActive = Object.values(filters).some(v => v);
   // 30-day threshold as a lexicographically comparable SQLite datetime string

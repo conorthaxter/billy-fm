@@ -107,7 +107,7 @@ function MobileBottomPanel() {
     ['/r/', '/set/', '/songbook/', '/wedding/', '/request/'].some(p => location.pathname.startsWith(p));
 
   const { nowPlaying, queue, playSong, removeFromQueue, clearNP, dashExtras = {} } = ctx || {};
-  const { onSelectSong = () => {} } = dashExtras;
+  const { onSelectSong = () => {}, onOpenChords } = dashExtras;
 
   useEffect(() => {
     document.body.classList.toggle('mobile-np-active', !hide && !!nowPlaying);
@@ -149,9 +149,8 @@ function MobileBottomPanel() {
             <div className="mnp-meta">{nowPlaying.artist}{nowPlaying.key ? ` · ${nowPlaying.key}` : ''}</div>
           </div>
           <div className="mnp-actions" onClick={e => e.stopPropagation()}>
-            {nowPlaying.chords_url && (
-              <a className="mnp-chords" href={nowPlaying.chords_url} target="_blank" rel="noopener"
-                onClick={e => e.stopPropagation()}>chords</a>
+            {onOpenChords && (
+              <button className="mnp-chords" onClick={e => { e.stopPropagation(); onOpenChords(nowPlaying); }}>chords</button>
             )}
             <button className="mnp-queue-btn" onClick={e => { e.stopPropagation(); setQueueOpen(o => !o); }}>
               {queueOpen ? '↓' : '↑'}{queue.length > 0 ? ` ${queue.length}` : ''}
@@ -203,6 +202,7 @@ function GlobalRightPanel() {
     onDismissSuggestion = () => {},
     onAddSuggestionToQueue = () => {},
     onOpenDialog,
+    onOpenChords,
   } = dashExtras;
 
   function handleClearHistory() {
@@ -254,6 +254,7 @@ function GlobalRightPanel() {
       onDragFromNP={handleDragFromNP}
       onReorderHistory={reorderHistory}
       onSelectNP={onSelectSong}
+      onOpenChords={onOpenChords}
     />
   );
 }

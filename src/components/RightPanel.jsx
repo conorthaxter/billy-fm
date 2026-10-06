@@ -1,6 +1,7 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { keyColor } from '../utils/keyColors';
 import { useSettings } from '../contexts/SettingsContext';
+import ChordPreview from './chords/ChordPreview';
 
 // ─── Drag data helpers ─────────────────────────────────────────────────────────
 
@@ -52,7 +53,7 @@ function SuggestionsSection({ suggestions, onAddToQueue, onDismiss }) {
 
 // ─── Previously Played section ────────────────────────────────────────────────
 
-function PPSection({ history, collapsed, onToggle, onClear, onRemove, onSelect, onPlay, songs, onDropToPP, onReorderHistory }) {
+function PPSection({ compact, expanded, onToggleExpanded, history, collapsed, onToggle, onClear, onRemove, onSelect, onPlay, songs, onDropToPP, onReorderHistory }) {
   const { palette } = useSettings();
   const [dropOver, setDropOver] = useState(false);
   const dragPPIdx = useRef(null);
@@ -107,7 +108,11 @@ function PPSection({ history, collapsed, onToggle, onClear, onRemove, onSelect, 
         >CLEAR</button>
       </div>
       <div style={{ overflowY: 'auto', flex: 1 }}>
+        {compact && !expanded && history.length > 1 && (
+          <button className="cc-pp-more" onClick={onToggleExpanded}>▸ {history.length - 1} more</button>
+        )}
         {history.map((ev, origIdx) => {
+          if (compact && !expanded && origIdx !== history.length - 1) return null;
           const [bg] = keyColor(ev.key, palette);
           const song = songs.find(x => x.song_id === ev.songId);
           return (
@@ -183,13 +188,6 @@ function NPSection({ nowPlaying, onClear, onClearData, onDropToNP, onDragFromNP,
   }
 
   const [bg, fg] = keyColor(nowPlaying.key, palette);
-  const isUrl = u => /^https?:\/\//i.test(u || '');
-  const isSearchUrl = u => (u || '').includes('google.com/search');
-  const chordSrc = isUrl(nowPlaying.chords_url) ? nowPlaying.chords_url : '';
-  const chordsLabel = chordSrc
-    ? (isSearchUrl(chordSrc) ? 'Find chords on UG ↗' : 'CHORDS ↗')
-    : null;
-
   return (
     <div
       className={`np-sec${dropOver ? ' drop-target' : ''}`}
@@ -205,6 +203,7 @@ function NPSection({ nowPlaying, onClear, onClearData, onDropToNP, onDragFromNP,
       >
         NOW PLAYING {onSelectNP && <span style={{ fontSize: 9, color: '#aaa' }}>↗</span>}
       </div>
+      <button className="np-close" onClick={onClear} title="Clear Now Playing" aria-label="Clear Now Playing">×</button>
       <div
         className="np-content"
         draggable
@@ -231,30 +230,13 @@ function NPSection({ nowPlaying, onClear, onClearData, onDropToNP, onDragFromNP,
           {(nowPlaying.genre || []).map(g => (
             <span key={g} className="np-tag">{g}</span>
           ))}
-          {(nowPlaying.tags || []).map(t => (
-            <span key={t} className="np-tag">{t}</span>
-          ))}
         </div>
-
-        {chordsLabel && (
-          <button
-            className="np-btn"
-            style={{ display: 'block', width: '100%', textAlign: 'left', marginBottom: 5 }}
-            onClick={() => window.open(chordSrc, '_blank', 'noopener')}
-          >
-            {chordsLabel}
-          </button>
-        )}
 
         {nowPlaying.notes && (
           <div style={{ fontSize: 10, color: '#666', lineHeight: 1.5, marginBottom: 5, maxHeight: 48, overflowY: 'auto' }}>
             {nowPlaying.notes}
           </div>
         )}
-
-        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-          <button className="np-btn" onClick={onClear}>CLEAR</button>
-        </div>
       </div>
     </div>
   );
@@ -262,10 +244,22 @@ function NPSection({ nowPlaying, onClear, onClearData, onDropToNP, onDragFromNP,
 
 // ─── Session section ───────────────────────────────────────────────────────────
 
-function SessionSection({ session, playHistory, onNew, onSave, onClear }) {
+function SessionSection({ compact, session, playHistory, onNew, onSave, onClear }) {
+  const [open, setOpen] = useState(false);
   const playedCount = session
     ? [...new Set(playHistory.filter(e => e.timestamp >= session.startTime).map(e => e.songId))].length
     : 0;
+
+  if (compact && !open) {
+    return (
+      <div className="cc-set-summary" onClick={() => setOpen(true)} title="Show set controls">
+        <b>Current Set:</b>
+        <span className="session-name">{session ? session.title : '—'}</span>
+        {session && <span className="session-count">({playedCount} played)</span>}
+        <span>▸</span>
+      </div>
+    );
+  }
 
   return (
     <div className="session-sec">
@@ -404,10 +398,23 @@ export default function RightPanel({
   onDragFromNP,
   onReorderHistory,
   onSelectNP,
+  onOpenChords,
 }) {
+  // Chord preview shows only for a now-playing song that has a chart. Prefer the
+  // live library row (current transpose offset) over the copy held by Now Playing.
+  const liveNP = nowPlaying ? (songs.find(s => s.song_id === nowPlaying.song_id) ?? nowPlaying) : null;
+  const showPreview = !!liveNP?.has_chart;
+
+  // Previously Played starts collapsed to one row whenever the preview opens.
+  const [ppExpanded, setPpExpanded] = useState(false);
+  useEffect(() => { if (showPreview) setPpExpanded(false); }, [showPreview]);
+
   return (
-    <div className="right-panel">
+    <div className={`right-panel${showPreview ? ' cc-open' : ''}`}>
       <PPSection
+        compact={showPreview}
+        expanded={ppExpanded}
+        onToggleExpanded={() => setPpExpanded(true)}
         history={playHistory}
         collapsed={ppCollapsed}
         onToggle={onTogglePP}
@@ -428,6 +435,7 @@ export default function RightPanel({
         onSelectNP={onSelectNP}
       />
       <SessionSection
+        compact={showPreview}
         session={session}
         playHistory={playHistory}
         onNew={onNewSession}
@@ -447,6 +455,12 @@ export default function RightPanel({
         onAddToQueue={onAddSuggestionToQueue}
         onDismiss={onDismissSuggestion}
       />
+      {showPreview && (
+        <ChordPreview
+          song={liveNP}
+          onOpenFocus={onOpenChords ? () => onOpenChords(liveNP) : undefined}
+        />
+      )}
     </div>
   );
 }
