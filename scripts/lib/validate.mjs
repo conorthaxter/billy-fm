@@ -7,6 +7,9 @@ export function loadDelivery(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
 }
 
+// Title/artist are compared ignoring case and surrounding whitespace.
+const norm = v => String(v ?? '').trim().toLowerCase();
+
 // Returns an array of failure strings. Empty array = clean.
 export function validateDelivery(entries, songs) {
   const byId = new Map(songs.map(s => [s.id, s]));
@@ -30,7 +33,7 @@ export function validateDelivery(entries, songs) {
 
     const row = byId.get(e.id);
     if (!row) { failures.push(`${label}: id not found in songs`); continue; }
-    if (row.title !== e.title || row.artist !== e.artist) {
+    if (norm(row.title) !== norm(e.title) || norm(row.artist) !== norm(e.artist)) {
       failures.push(`${label}: DB has "${row.title}" — ${row.artist}`);
     }
     if (e.db_key_was_null && !e.final_key) failures.push(`${label}: db_key_was_null but final_key is empty`);
