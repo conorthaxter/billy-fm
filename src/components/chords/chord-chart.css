@@ -69,7 +69,7 @@ body.dark .cc-chart, body.dark .cc-focus, body.dark .cc-preview, body.dark .righ
 
 /* ── Focus mode ────────────────────────────────────────────── */
 .cc-focus {
-  --cc-size: 18px;
+  --cc-size: 22px;
   --cc-label-size: 12px;
   --cc-line-gap: 12px;
   position: fixed;
