@@ -187,13 +187,56 @@ function ChartPane({ song, canEdit, onClose, onOffsetChange, onChartSaved, dirty
 // Full-screen focus mode: chart for the selected song on the left (2/3), the
 // library as tiles on the right. Picking a tile only selects it — it never
 // changes Now Playing.
-export default function FocusMode({ song, songs, nowPlaying, canEdit, onClose, onSelectSong, onAddToQueue, onOffsetChange, onChartSaved }) {
+export default function FocusMode({ song, songs, nowPlaying, canEdit, onClose, onSelectSong, onAddToQueue, onPlayNext, onOffsetChange, onChartSaved }) {
   const dirtyRef = useRef(false);
+  const searchRef = useRef(null);
+  const [query, setQuery] = useState('');
+
+  const q = query.trim().toLowerCase();
+  const visible = useMemo(() => {
+    if (!q) return songs;
+    return songs.filter(s =>
+      s.title.toLowerCase().includes(q) ||
+      s.artist.toLowerCase().includes(q) ||
+      (s.genre || []).some(g => g.toLowerCase().includes(q)) ||
+      (s.tags || []).some(t => t.toLowerCase().includes(q)));
+  }, [songs, q]);
 
   function select(next) {
     if (song && next.song_id === song.song_id) return;
     if (dirtyRef.current && !window.confirm('Discard your chord changes?')) return;
     onSelectSong(next);
+  }
+
+  // "/" jumps to search; Tab ripples the queue (next song becomes Now Playing and selected).
+  // Both are ignored while typing in a field.
+  useEffect(() => {
+    function onKey(e) {
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) return;
+      if (e.key === '/') {
+        e.preventDefault();
+        searchRef.current?.focus();
+      } else if (e.key === 'Tab') {
+        e.preventDefault();
+        if (dirtyRef.current && !window.confirm('Discard your chord changes?')) return;
+        onPlayNext?.();
+      }
+    }
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onPlayNext]);
+
+  function onSearchKeyDown(e) {
+    if (e.key === 'Escape') {
+      // Escape in the search box clears it; it does not close focus mode.
+      e.stopPropagation();
+      setQuery('');
+      e.currentTarget.blur();
+    } else if (e.key === 'Enter' && visible[0]) {
+      e.preventDefault();
+      select(visible[0]);
+      e.currentTarget.blur();
+    }
   }
 
   useEffect(() => {
@@ -229,9 +272,22 @@ export default function FocusMode({ song, songs, nowPlaying, canEdit, onClose, o
 
       <div className="cc-focus-lib">
         <div className="cc-preview-hdr"><span>LIBRARY</span></div>
+        <div className="cc-search">
+          <input
+            ref={searchRef}
+            type="text"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            onKeyDown={onSearchKeyDown}
+            placeholder="Search songs  ( / )"
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck={false}
+          />
+        </div>
         <div className="cc-focus-lib-body">
           <div className="song-grid">
-            {songs.map(s => (
+            {visible.map(s => (
               <SongCell
                 key={s.song_id}
                 song={s}

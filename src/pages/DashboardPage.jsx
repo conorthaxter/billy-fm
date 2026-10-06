@@ -746,6 +746,16 @@ export default function DashboardPage() {
   }
 
   // Opens focus mode on `song` (selecting it first); with no song, keeps the current selection.
+  // Focus mode only: Tab plays the next queued song and selects it so its chords come up.
+  function rippleQueue() {
+    if (!queue.length) return;
+    const next = queue[0];
+    ctx.playSong(next);
+    setMultiSelected([]);
+    setSelectedSong(songs.find(s => s.song_id === next.song_id) ?? next);
+    notify(`▶ ${next.title}`);
+  }
+
   function openChords(song) {
     if (song) setSelectedSong(songs.find(s => s.song_id === song.song_id) ?? song);
     setFocusOpen(true);
@@ -1030,6 +1040,7 @@ export default function DashboardPage() {
           onClose={() => setFocusOpen(false)}
           onSelectSong={song => { setMultiSelected([]); setSelectedSong(song); }}
           onAddToQueue={addToQueue}
+          onPlayNext={rippleQueue}
           onOffsetChange={handleOffsetChange}
           onChartSaved={handleChartSaved}
         />

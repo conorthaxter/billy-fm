@@ -82,6 +82,16 @@ body.dark .cc-chart, body.dark .cc-focus, body.dark .cc-preview, body.dark .righ
 }
 .cc-focus-main { flex: 2 1 0; min-width: 0; display: flex; flex-direction: column; position: relative; }
 .cc-focus-lib { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; border-left: 1px solid var(--cc-ink); }
+.cc-search { padding: var(--cc-pad); border-bottom: 1px solid var(--cc-ink); }
+.cc-search input {
+  width: 100%;
+  font-family: var(--cc-control-font);
+  font-size: 16px; /* 16px minimum on inputs — iOS zooms on focus below this */
+  border: 1px solid var(--cc-ink);
+  background: var(--cc-surface);
+  color: var(--cc-ink);
+  padding: 3px var(--cc-pad);
+}
 .cc-focus-lib-body { flex: 1; overflow-y: auto; padding: var(--cc-pad); }
 @media (max-width: 700px) {
   .cc-focus { flex-direction: column; }
