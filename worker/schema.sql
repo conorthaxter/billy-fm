@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS songs (
   created_at TEXT DEFAULT (datetime('now')),
   wedding_rank INTEGER DEFAULT NULL,
   wedding_moment TEXT DEFAULT NULL,
+  ceremony_role TEXT DEFAULT NULL,   -- prelude | processional | recessional (0011)
   UNIQUE(title, artist)
 );
 
