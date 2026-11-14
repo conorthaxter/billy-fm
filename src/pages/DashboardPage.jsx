@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { getLibrary, updateLibraryEntry, removeFromLibrary, importAllSongs } from '../api/library';
 import { updateSong } from '../api/songs';
-import { createPlaylist, listPlaylists, setPlaylistSongs, getPlaylist, updatePlaylist, deletePlaylist } from '../api/playlists';
+import { addPlaylistSong, removePlaylistSong, createPlaylist, listPlaylists, setPlaylistSongs, getPlaylist, updatePlaylist, deletePlaylist } from '../api/playlists';
 import { getTransitions, createTransition as apiCreateTransition } from '../api/transitions';
 import { enrichSongs, getFirstWord } from '../utils/enrichment';
 import { shuffle, computeFadedIds } from '../utils/filters';
@@ -630,6 +630,47 @@ export default function DashboardPage() {
     setOpenPlaylistLoading(false);
   }
 
+  async function handleAddToPlaylist(id, song) {
+    const pl = playlists.find(p => String(p.id) === String(id));
+    try {
+      const full = await getPlaylist(id);
+      if ((full.songs || []).some(s => s.song_id === song.song_id)) {
+        notify(`"${song.title}" is already in "${pl?.title ?? 'playlist'}"`);
+        return;
+      }
+      await addPlaylistSong(id, song.song_id);
+      notify(`Added "${song.title}" to "${pl?.title ?? 'playlist'}"`);
+    } catch (err) {
+      notify(err.message || 'Failed to add to playlist');
+    }
+  }
+
+  async function handleAddSongToOpenPlaylist(id, song) {
+    if ((openPlaylist?.songs || []).some(s => s.song_id === song.song_id)) {
+      notify(`"${song.title}" is already in this playlist`);
+      return;
+    }
+    try {
+      await addPlaylistSong(id, song.song_id);
+      const data = await getPlaylist(id);
+      setOpenPlaylist(p => p && p.id === id ? data : p);
+      notify(`Added "${song.title}"`);
+    } catch (err) {
+      notify(err.message || 'Failed to add song');
+    }
+  }
+
+  async function handleRemoveSongFromPlaylist(id, song) {
+    if (!confirm(`Remove "${song.title}" from this playlist?`)) return;
+    try {
+      await removePlaylistSong(id, song.song_id);
+      setOpenPlaylist(p => p && p.id === id ? { ...p, songs: (p.songs || []).filter(s => s.song_id !== song.song_id) } : p);
+      notify(`Removed "${song.title}"`);
+    } catch (err) {
+      notify(err.message || 'Failed to remove song');
+    }
+  }
+
   function handleClosePlaylist() { setOpenPlaylist(null); }
 
   async function handlePlaylistRename(id, title) {
@@ -993,6 +1034,9 @@ export default function DashboardPage() {
             onPlaylistDelete={handlePlaylistDelete}
             onPlaylistToggleFavorite={handlePlaylistToggleFavorite}
             onPlaylistPlayAll={handlePlaylistPlayAll}
+            onPlaylistRemoveSong={handleRemoveSongFromPlaylist}
+            onPlaylistAddSong={handleAddSongToOpenPlaylist}
+            librarySongs={songs}
             onSongClick={(song, isMulti) => {
               const libSong = songs.find(s => s.song_id === song.song_id) || song;
               selectSong(libSong, isMulti);
@@ -1043,6 +1087,8 @@ export default function DashboardPage() {
           onPlayNext={rippleQueue}
           onOffsetChange={handleOffsetChange}
           onChartSaved={handleChartSaved}
+          playlists={playlists}
+          onAddToPlaylist={handleAddToPlaylist}
         />
       )}
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { keyColor } from '../utils/keyColors';
 import { useSettings } from '../contexts/SettingsContext';
 
@@ -49,6 +49,92 @@ function PlaylistCard({ pl, onOpen, onDelete, onToggleFavorite }) {
   );
 }
 
+// Inline song search for a playlist. Matches the top search bar: title/artist
+// substring, first 8 results, arrow keys + Enter, hover highlight.
+function AddSongSearch({ songs, onAdd, onClose }) {
+  const { palette } = useSettings();
+  const wrapRef = useRef(null);
+  const [query,        setQuery]        = useState('');
+  const [kbIdx,        setKbIdx]        = useState(-1);
+  const [hoverIdx,     setHoverIdx]     = useState(-1);
+  const [keyboardMode, setKeyboardMode] = useState(false);
+  const activeIdx = keyboardMode ? kbIdx : hoverIdx;
+
+  const q = query.toLowerCase();
+  const suggestions = q
+    ? songs.filter(s => s.title.toLowerCase().includes(q) || s.artist.toLowerCase().includes(q)).slice(0, 8)
+    : [];
+
+  useEffect(() => { setKbIdx(-1); setHoverIdx(-1); setKeyboardMode(false); }, [query]);
+
+  useEffect(() => {
+    function onMouseDown(e) { if (!wrapRef.current?.contains(e.target)) onClose(); }
+    document.addEventListener('mousedown', onMouseDown);
+    return () => document.removeEventListener('mousedown', onMouseDown);
+  }, [onClose]);
+
+  function pick(song) { onAdd(song); onClose(); }
+
+  function onKeyDown(e) {
+    if (e.key === 'Escape') { e.stopPropagation(); onClose(); return; }
+    if (e.key === 'Backspace' && query === '') { onClose(); return; }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault(); setKeyboardMode(true);
+      setKbIdx(i => Math.min(i + 1, suggestions.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault(); setKeyboardMode(true);
+      setKbIdx(i => Math.max(i - 1, -1));
+    } else if (e.key === 'Enter') {
+      e.preventDefault(); e.stopPropagation();
+      const target = activeIdx >= 0 ? suggestions[activeIdx] : suggestions[0];
+      if (target) pick(target);
+    }
+  }
+
+  return (
+    <div ref={wrapRef} style={{ position: 'relative', marginBottom: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <input
+          type="text"
+          className="search-input"
+          placeholder="song or artist… · ↑↓ navigate · Enter add"
+          autoComplete="off"
+          autoFocus
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          onKeyDown={onKeyDown}
+        />
+        <button className="nb" onClick={onClose}>✕</button>
+      </div>
+      {suggestions.length > 0 && (
+        <div
+          className="search-sug on"
+          style={{ position: 'absolute', top: '100%', left: 0, right: 0 }}
+          onMouseMove={() => setKeyboardMode(false)}
+        >
+          {suggestions.map((s, idx) => {
+            const [bg] = keyColor(s.key, palette);
+            return (
+              <div
+                key={s.song_id}
+                className={`si${idx === activeIdx ? ' si-active' : ''}`}
+                onMouseEnter={() => setHoverIdx(idx)}
+                onClick={() => pick(s)}
+              >
+                <span className="si-dot" style={{ background: bg }} />
+                <div className="si-info">
+                  <div className="si-title">{s.title}</div>
+                  <div className="si-sub">{s.artist}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function PlaylistDetail({
   playlist,
   loading,
@@ -56,6 +142,9 @@ function PlaylistDetail({
   onRename,
   onDelete,
   onToggleFavorite,
+  onRemoveSong,
+  onAddSong,
+  librarySongs,
   onPlayAll,
   onSongClick,
   onSongDblClick,
@@ -64,9 +153,11 @@ function PlaylistDetail({
   const { palette } = useSettings();
   const [titleEditing, setTitleEditing] = useState(false);
   const [titleDraft,   setTitleDraft]   = useState('');
+  const [adding,        setAdding]        = useState(false);
 
   useEffect(() => {
     setTitleEditing(false);
+    setAdding(false);
   }, [playlist?.id]); // eslint-disable-line
 
   function commitTitle() {
@@ -132,6 +223,19 @@ function PlaylistDetail({
         )}
       </div>
 
+      {adding ? (
+        <AddSongSearch
+          songs={librarySongs || []}
+          onAdd={song => onAddSong?.(playlist.id, song)}
+          onClose={() => setAdding(false)}
+        />
+      ) : (
+        <button
+          style={{ fontFamily: 'var(--font)', fontSize: 10, letterSpacing: '.06em', textTransform: 'uppercase', border: '1px solid #000', background: '#fff', cursor: 'pointer', padding: '3px 10px', marginBottom: 16 }}
+          onClick={() => setAdding(true)}
+        >+ add song</button>
+      )}
+
       {/* Song list */}
       {loading && (
         <div style={{ color: '#888', fontSize: 12 }}>Loading…</div>
@@ -174,6 +278,11 @@ function PlaylistDetail({
                 {song.bpm && (
                   <span style={{ fontSize: 10, color: '#aaa', flexShrink: 0, width: 36, textAlign: 'right' }}>{song.bpm}</span>
                 )}
+                <button
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 16, color: '#c00', lineHeight: 1, flexShrink: 0 }}
+                  title="Remove from playlist"
+                  onClick={e => { e.stopPropagation(); onRemoveSong?.(playlist.id, song); }}
+                >×</button>
               </div>
             );
           })}
@@ -194,6 +303,9 @@ export default function PlaylistsPanel({
   onPlaylistDelete,
   onPlaylistToggleFavorite,
   onPlaylistPlayAll,
+  onPlaylistRemoveSong,
+  onPlaylistAddSong,
+  librarySongs = [],
   onSongClick,
   onSongDblClick,
   multiSelected = new Set(),
@@ -208,6 +320,9 @@ export default function PlaylistsPanel({
           onRename={onPlaylistRename}
           onDelete={onPlaylistDelete}
           onToggleFavorite={onPlaylistToggleFavorite}
+          onRemoveSong={onPlaylistRemoveSong}
+          onAddSong={onPlaylistAddSong}
+          librarySongs={librarySongs}
           onPlayAll={onPlaylistPlayAll}
           onSongClick={onSongClick}
           onSongDblClick={onSongDblClick}

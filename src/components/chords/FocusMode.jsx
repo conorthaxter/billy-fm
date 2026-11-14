@@ -17,7 +17,7 @@ const ZOOM_KEY = 'bfm_chart_zoom';
 
 // Left pane: the chart for one song. Only the owner account sees the pencil /
 // import; everyone else gets the chart and the transpose stepper.
-function ChartPane({ song, canEdit, onClose, onOffsetChange, onChartSaved, dirtyRef, zoom, onZoomChange }) {
+function ChartPane({ song, canEdit, onClose, onOffsetChange, onChartSaved, dirtyRef, zoom, onZoomChange, playlists, onAddToPlaylist }) {
   const { palette } = useSettings();
   const { chart, loading, error } = useChart(song.song_id);
   const offset = song.transpose_offset || 0;
@@ -145,6 +145,18 @@ function ChartPane({ song, canEdit, onClose, onOffsetChange, onChartSaved, dirty
           <button className="zoom-btn" onClick={() => onZoomChange(zoom + 0.1)} title="Text larger">+</button>
         </div>
 
+        {onAddToPlaylist && (
+          <select
+            className="cc-btn cc-playlist-select"
+            value=""
+            onChange={e => { const id = e.target.value; if (id) onAddToPlaylist(id, song); }}
+            title="Add this song to a playlist"
+          >
+            <option value="">Add to playlist…</option>
+            {(playlists || []).map(pl => <option key={pl.id} value={pl.id}>{pl.title}</option>)}
+          </select>
+        )}
+
         <div className="cc-focus-actions">
           {canEdit && !editing && (
             <>
@@ -205,7 +217,7 @@ function ChartPane({ song, canEdit, onClose, onOffsetChange, onChartSaved, dirty
 // Full-screen focus mode: chart for the selected song on the left (2/3), the
 // library as tiles on the right. Picking a tile only selects it — it never
 // changes Now Playing.
-export default function FocusMode({ song, songs, nowPlaying, canEdit, onClose, onSelectSong, onAddToQueue, onPlayNext, onOffsetChange, onChartSaved }) {
+export default function FocusMode({ song, songs, nowPlaying, canEdit, onClose, onSelectSong, onAddToQueue, onPlayNext, onOffsetChange, onChartSaved, playlists, onAddToPlaylist }) {
   const dirtyRef = useRef(false);
 
   const [zoom, setZoom] = useState(() => {
@@ -292,6 +304,8 @@ export default function FocusMode({ song, songs, nowPlaying, canEdit, onClose, o
           dirtyRef={dirtyRef}
           zoom={zoom}
           onZoomChange={handleZoomChange}
+          playlists={playlists}
+          onAddToPlaylist={onAddToPlaylist}
         />
       ) : (
         <div className="cc-focus-main">
